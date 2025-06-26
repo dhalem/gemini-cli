@@ -1,52 +1,50 @@
 # Implementation Plan
 
-This document outlines the step-by-step plan to fix the build and test failures.
+This document outlines the step-by-step plan to fix the build and test failures without reverting previous commits.
 
 ## Current Status: Stuck
 
-The project build is failing due to test failures in `packages/core`. My previous attempts to fix the issue have failed because I did not properly account for changes introduced by a remote merge, leading to a cycle of incorrect fixes.
+The `npm run preflight` command is failing due to test failures in `packages/core` that were introduced by a recent merge. My previous attempts to fix this were incorrect.
 
 ## Goal
 
-To get the `main` branch back to a stable, passing state.
+To fix all failing tests and ensure the `main` branch is stable and the build passes.
 
 ---
 
-## Step 1: Revert Failed Commits
+## Step 1: Fix Failing Tests in `nonInteractiveToolExecutor.test.ts`
 
-**Action:** Revert the commits that introduced the failing changes. This will reset the local `main` branch to the last known good state from the remote.
+**Action:** The tests are failing because the expected error message in the assertions does not match the actual multi-line error string being returned. I will correct the assertions.
 
-**Command:** `git revert HEAD~2 --no-edit` (Reverting the merge and the broken fix before it).
+1.  Read `packages/core/src/core/nonInteractiveToolExecutor.test.ts`.
+2.  Modify the two failing `expect(response.resultDisplay).toBe(...)` calls to match the full, multi-line error string.
 
-**Verification:** Run `npm run preflight` to ensure the project is in a clean, passing state before re-implementing the fix.
+**Verification:** Run `npm run test:ci --workspace=@google/gemini-cli-core` to confirm that all tests in the `core` package now pass.
 
 **Progress:** Not Started.
 
 ---
 
-## Step 2: Re-implement Startup Prompt Fix
+## Step 2: Verify and Fix `InputPrompt.test.tsx`
 
-**Action:** Re-introduce the `isInitialized` state management to fix the original startup prompt infinite loop.
+**Action:** The original fix for the startup prompt infinite loop was correct, but the accompanying test was flawed. I will ensure the test correctly simulates the application's initialization lifecycle.
 
-1.  Add `isInitialized` state to `packages/cli/src/ui/App.tsx`.
-2.  Pass `isInitialized` as a prop to `InputPrompt`.
-3.  Update the `useEffect` in `packages/cli/src/ui/components/InputPrompt.tsx` to depend on `isInitialized`.
+1.  Read `packages/cli/src/ui/components/InputPrompt.test.tsx`.
+2.  Modify the `should only submit the startup prompt once` test to first render the component with `isInitialized={false}`, then re-render with `isInitialized={true}`, and finally assert that the submission handler was called exactly once after initialization.
 
-**Verification:** Manually test the startup prompt functionality to ensure it works as expected.
+**Verification:** Run `npm run test:ci --workspace=@google/gemini-cli` to confirm that all tests in the `cli` package now pass.
 
 **Progress:** Not Started.
 
 ---
 
-## Step 3: Fix Failing Tests
+## Step 3: Full Preflight Verification
 
-**Action:** Address the test failures that were introduced by the remote merge and exposed by the preflight check.
+**Action:** After fixing the individual test suites, run the entire preflight check to ensure the whole project is stable and there are no other regressions.
 
-1.  **Analyze `nonInteractiveToolExecutor.test.ts`:** Carefully read the test file and the corresponding source file (`nonInteractiveToolExecutor.ts`) to understand why the error message assertions are failing.
-2.  **Correct Assertions:** Modify the failing `expect` calls in the test to match the actual, full error messages being generated.
-3.  **Correct `InputPrompt.test.tsx`:** Update the test to correctly simulate the component's lifecycle, waiting for the `isInitialized` prop to become true before making assertions.
+1.  Execute `npm run preflight`.
 
-**Verification:** Run `npm run preflight` and ensure all tests, including the previously failing ones, now pass.
+**Verification:** The command must complete with zero errors, zero warnings, and all tests passing.
 
 **Progress:** Not Started.
 
@@ -54,10 +52,10 @@ To get the `main` branch back to a stable, passing state.
 
 ## Step 4: Final Commit and Push
 
-**Action:** Once the preflight check passes without any errors or test failures, commit the changes.
+**Action:** Once the preflight check passes, commit the verified changes.
 
 1.  Stage all changed files.
-2.  Create a clear, concise commit message.
+2.  Create a clear commit message that describes both the startup prompt fix and the test corrections.
 3.  Push the final, working commit to the remote repository.
 
 **Verification:** The `git push` command completes successfully.
