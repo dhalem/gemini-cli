@@ -88,6 +88,7 @@ export const AppWrapper = (props: AppProps) => (
 const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const { stdout } = useStdout();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     checkForUpdates().then(setUpdateMessage);
@@ -148,7 +149,9 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
     handleAuthHighlight,
     isAuthenticating,
     cancelAuthentication,
-  } = useAuthCommand(settings, setAuthError, config);
+  } = useAuthCommand(settings, setAuthError, config, () => {
+    setIsAuthenticated(true);
+  });
 
   useEffect(() => {
     if (settings.merged.selectedAuthType) {
@@ -156,6 +159,8 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
       if (error) {
         setAuthError(error);
         openAuthDialog();
+      } else {
+        setIsAuthenticated(true);
       }
     }
   }, [settings.merged.selectedAuthType, openAuthDialog, setAuthError]);
@@ -788,7 +793,9 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
                   slashCommands={slashCommands}
                   shellModeActive={shellModeActive}
                   setShellModeActive={setShellModeActive}
-                  startupPrompt={config.getStartupPrompt()}
+                  startupPrompt={
+                    isAuthenticated ? config.getStartupPrompt() : undefined
+                  }
                 />
               )}
             </>

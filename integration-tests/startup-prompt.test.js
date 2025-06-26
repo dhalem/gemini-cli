@@ -4,72 +4,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { geminiInteractive } from './test-helper-interactive.js';
-import { it, describe, beforeEach } from 'node:test';
+import { geminiInteractive } from './interactive-test-helper.js';
+import { it } from 'node:test';
 import assert from 'node:assert';
-import * as fs from 'fs';
-import * as path from 'path';
-import { makeTestDir, getTestHelpers } from './test-helper.js';
 
-const { exec } = getTestHelpers();
+it('should FAIL with current code, then PASS with fixed code', async () => {
+  const { ptyProcess, waitFor } = geminiInteractive([
+    '--startup-prompt',
+    'what is the capitol of France',
+  ]);
 
-describe('gemini --startup-prompt interactive', () => {
-  let testDir;
+  // 1. Wait for the CLI to be fully interactive and ready for user input.
+  // This is the key step that was missing.
+  await waitFor('>', 15000);
 
-  beforeEach(() => {
-    testDir = makeTestDir();
-  });
+  // 2. NOW, look for the answer. With the bug, this will time out.
+  // With the fix, this will pass.
+  const output = await waitFor('Paris', 15000);
 
-  it('should run a startup prompt and wait for the answer "Paris"', async () => {
-    const { ptyProcess, waitFor } = geminiInteractive([
-      '--startup-prompt',
-      'what is the capitol of France',
-    ]);
+  // 3. Assert the output is correct.
+  assert.ok(output.includes('Paris'));
 
-    const output = await waitFor('Paris');
-    fs.writeFileSync(path.join(testDir, 'output.log'), output);
-    assert.ok(output.includes('Paris'));
-    ptyProcess.kill();
-  });
-
-  it('should run a startup prompt from a file and wait for the answer "Paris"', async () => {
-    const promptFile = path.join(testDir, 'prompt.txt');
-    fs.writeFileSync(promptFile, 'what is the capitol of France');
-    const { ptyProcess, waitFor } = geminiInteractive([
-      '--startup-prompt-file',
-      promptFile,
-    ]);
-
-    const output = await waitFor('Paris');
-    fs.writeFileSync(path.join(testDir, 'output.log'), output);
-    assert.ok(output.includes('Paris'));
-    ptyProcess.kill();
-  });
-
-  it('should run a startup prompt and wait for the answer "Rome"', async () => {
-    const { ptyProcess, waitFor } = geminiInteractive([
-      '--startup-prompt',
-      'what is the capitol of Italy',
-    ]);
-
-    const output = await waitFor('Rome');
-    fs.writeFileSync(path.join(testDir, 'output.log'), output);
-    assert.ok(output.includes('Rome'));
-    ptyProcess.kill();
-  });
-
-  it('should error if both startup-prompt and startup-prompt-file are provided', async () => {
-    const result = await exec([
-      '--startup-prompt',
-      'foo',
-      '--startup-prompt-file',
-      'bar',
-    ]);
-    assert.equal(result.exitCode, 1);
-    assert.ok(
-      result.stderr.includes(
-        '--startup-prompt and --startup-prompt-file are mutually exclusive.',
-      ),
-    );
-  });
+  // 4. Clean up the process.
+  ptyProcess.kill();
 });

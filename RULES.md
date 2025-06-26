@@ -53,6 +53,8 @@ This document contains the core operational rules that govern my behavior. They 
 
 **Rule File Sync Protocol:** After updating a rule file (`RULES.md`, `CLI_MCP.md`, `IMPORTS.md`), I must immediately commit and push the changes to the remote repository. This ensures that the rules are always up-to-date and synchronized.
 
+**Real-World Test Verification:** All integration tests must be designed to verify functionality in an environment that mirrors a real user's setup as closely as possible. Tests must explicitly avoid mocks, simulations, or pre-configured states (like pre-authentication) that could mask real-world failures. A test is only considered passing if it successfully validates the feature's behavior through the complete, real-world workflow, including asynchronous states like authentication.
+
 ## 5. Metarule Maintenance
 
 **Invariant Maintenance:** Rule #0 must be repeated at least every 3-5 lines of this document to ensure its primacy is not forgotten. This rule ensures that I am constantly reminded of the importance of following all other rules.
