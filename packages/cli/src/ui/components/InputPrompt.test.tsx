@@ -12,7 +12,6 @@ import { vi } from 'vitest';
 import { useShellHistory } from '../hooks/useShellHistory.js';
 import { useCompletion } from '../hooks/useCompletion.js';
 import { useInputHistory } from '../hooks/useInputHistory.js';
-import React from 'react';
 
 vi.mock('../hooks/useShellHistory.js');
 vi.mock('../hooks/useCompletion.js');
@@ -188,30 +187,33 @@ describe('InputPrompt', () => {
   });
 
   it('should only submit the startup prompt once', async () => {
-    const TestComponent = () => {
-      const [isInitialized, setIsInitialized] = React.useState(false);
-      React.useEffect(() => {
-        setTimeout(() => {
-          setIsInitialized(true);
-        }, 10);
-      }, []);
-
-      return (
-        <InputPrompt
-          {...props}
-          startupPrompt="startup"
-          isInitialized={isInitialized}
-        />
-      );
+    const startupProps = {
+      ...props,
+      startupPrompt: 'startup',
+      isInitialized: false,
     };
+    const { rerender, unmount } = render(<InputPrompt {...startupProps} />);
 
-    const { unmount } = render(<TestComponent />);
+    await wait();
 
-    await wait(100);
+    // Prompt should not be submitted initially because isInitialized is false
+    expect(startupProps.onSubmit).not.toHaveBeenCalled();
+    expect(startupProps.onStartupPromptHandled).not.toHaveBeenCalled();
 
-    expect(props.onSubmit).toHaveBeenCalledTimes(1);
-    expect(props.onSubmit).toHaveBeenCalledWith('startup');
-    expect(props.onStartupPromptHandled).toHaveBeenCalledTimes(1);
+    // Re-render with isInitialized = true
+    rerender(<InputPrompt {...startupProps} isInitialized={true} />);
+    await wait();
+
+    expect(startupProps.onSubmit).toHaveBeenCalledTimes(1);
+    expect(startupProps.onSubmit).toHaveBeenCalledWith('startup');
+    expect(startupProps.onStartupPromptHandled).toHaveBeenCalledTimes(1);
+
+    // Re-render again, should not trigger again
+    rerender(<InputPrompt {...startupProps} isInitialized={true} />);
+    await wait();
+
+    expect(startupProps.onSubmit).toHaveBeenCalledTimes(1);
+    expect(startupProps.onStartupPromptHandled).toHaveBeenCalledTimes(1);
 
     unmount();
   });
