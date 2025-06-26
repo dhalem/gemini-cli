@@ -20,5 +20,24 @@ export function geminiInteractive(args) {
     env: process.env,
   });
 
-  return ptyProcess;
+  return {
+    ptyProcess,
+    waitFor: async (searchText, timeout = 10000) => {
+      return new Promise((resolve, reject) => {
+        let allOutput = '';
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`Test timed out waiting for "${searchText}"`));
+        }, timeout);
+
+        ptyProcess.onData((data) => {
+          console.log('stdout:', data);
+          allOutput += data;
+          if (allOutput.includes(searchText)) {
+            clearTimeout(timeoutId);
+            resolve(allOutput);
+          }
+        });
+      });
+    },
+  };
 }
