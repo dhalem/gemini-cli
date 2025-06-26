@@ -190,18 +190,26 @@ describe('InputPrompt', () => {
     const startupProps = {
       ...props,
       startupPrompt: 'startup',
-      isInitialized: true,
+      isInitialized: false,
     };
     const { rerender, unmount } = render(<InputPrompt {...startupProps} />);
 
+    await wait();
+
+    // Prompt should not be submitted initially because isInitialized is false
+    expect(startupProps.onSubmit).not.toHaveBeenCalled();
+    expect(startupProps.onStartupPromptHandled).not.toHaveBeenCalled();
+
+    // Re-render with isInitialized = true
+    rerender(<InputPrompt {...startupProps} isInitialized={true} />);
     await wait();
 
     expect(startupProps.onSubmit).toHaveBeenCalledTimes(1);
     expect(startupProps.onSubmit).toHaveBeenCalledWith('startup');
     expect(startupProps.onStartupPromptHandled).toHaveBeenCalledTimes(1);
 
-    // Re-render with the same props, should not trigger again
-    rerender(<InputPrompt {...startupProps} />);
+    // Re-render again, should not trigger again
+    rerender(<InputPrompt {...startupProps} isInitialized={true} />);
     await wait();
 
     expect(startupProps.onSubmit).toHaveBeenCalledTimes(1);
