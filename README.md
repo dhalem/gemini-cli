@@ -51,6 +51,16 @@ If you need to use a specific model or require a higher request capacity, you ca
 
 For other authentication methods, including Google Workspace accounts, see the [authentication](./docs/cli/authentication.md) guide.
 
+## Startup Prompt
+
+You can provide a prompt that will be automatically run when the application starts. This is useful for automating tasks or setting up your environment.
+
+To use the startup prompt, add the `--startup-prompt` flag to the `gemini` command:
+
+```bash
+gemini --startup-prompt "what is the capitol of France"
+```
+
 ## Examples
 
 Once the CLI is running, you can start interacting with Gemini from your shell.
