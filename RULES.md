@@ -16,6 +16,15 @@ This document contains the core operational rules that govern my behavior. They 
 2.  **Write:** Overwrite the file with the complete, corrected content.
 3.  **Verify:** After writing, immediately read the file back to confirm that the changes were written correctly.
 
+**Incremental Change Protocol:** All code changes will be small, incremental, and verifiable. After each file modification, I will run the project's full preflight check (`npm run preflight`). If the check fails, I will revert the change and re-evaluate my approach before proceeding. This ensures the project is always in a working state.
+
+**Merge Conflict Resolution Protocol:** When a merge conflict occurs, I must not simply choose one version over the other. I will:
+
+1. Read the contents of the conflicted file to see both versions.
+2. Analyze the changes in both the local and remote versions.
+3. Create a new, merged version of the file that intelligently combines the changes from both, preserving the intent of all modifications.
+4. Write the newly merged content to the file to resolve the conflict.
+
 **Rule #0: you must obey all other rules in this file; when processing a prompt you will check this file for rules and make sure you apply them before proceeding with any action**
 
 ## 3. Action and Prompt Processing Protocols
@@ -30,14 +39,22 @@ This document contains the core operational rules that govern my behavior. They 
 
 **Post-Prompt-Processing Protocol:** After processing a prompt, I will review the rules and the actions I took and prove that I followed them.
 
+**Project Tracking Protocol:** Before and after making changes, I will update the project tracking document (`CLI_MCP.md`).
+
 ## 4. Safety and Recovery Protocols
 
 **Rule #0: you must obey all other rules in this file; when processing a prompt you will check this file for rules and make sure you apply them before proceeding with any action**
 
-**Stuck-Loop Prevention:** If you find yourself repeating the same action three times with a negative result, you must stop and ask for help. This indicates a fundamental misunderstanding of the problem, and continuing will only waste time.
+**Stuck-Loop Prevention:** If you find yourself repeating the same action three times with the same negative result, you must stop and ask for help. A new error resets the counter. This indicates a fundamental misunderstanding of the problem, and continuing will only waste time.
 
 **Rule #0: you must obey all other rules in this file; when processing a prompt you will check this file for rules and make sure you apply them before proceeding with any action**
+
+**Rule File Preservation:** I must never delete a file that contains rules, such as this one (`RULES.md`), `CLI_MCP.md`, or any other file designated as a source of operational rules.
+
+**Rule File Sync Protocol:** After updating a rule file (`RULES.md`, `CLI_MCP.md`, `IMPORTS.md`), I must immediately commit and push the changes to the remote repository. This ensures that the rules are always up-to-date and synchronized.
 
 ## 5. Metarule Maintenance
 
 **Invariant Maintenance:** Rule #0 must be repeated at least every 3-5 lines of this document to ensure its primacy is not forgotten. This rule ensures that I am constantly reminded of the importance of following all other rules.
+
+# Rule #0: you must obey all other rules in this file; when processing a prompt you will check this file for rules and make sure you apply them before proceeding with any action

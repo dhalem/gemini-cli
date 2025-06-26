@@ -2,14 +2,19 @@
 
 This document outlines the correct way to handle imports within the Gemini CLI monorepo to ensure a clean, maintainable, and scalable architecture.
 
-## Core Principles
+## 1. Key Packages and Their Roles
 
-The project is structured as a monorepo with two primary packages:
+The project is a monorepo structured into three primary packages, each with a distinct responsibility:
 
-1.  **`@google/gemini-cli` (`packages/cli`):** The user-facing frontend.
-2.  **`@google/gemini-cli-core` (`packages/core`):** The backend, handling logic, API communication, and tool execution.
+- **`@google/gemini-cli-core` (`packages/core`)**: This is the foundational package. It contains the core, reusable logic for interacting with the Gemini API, managing configuration, and defining the interfaces for tools. It is designed to be application-agnostic and should **never** depend on any other package in this monorepo.
 
-The fundamental rule of our architecture is **unidirectional dependency flow**:
+- **`@google/gemini-cli` (`packages/cli`)**: This is the main command-line application package. It is responsible for the user interface (UI), parsing command-line arguments, and orchestrating the overall application flow. It **depends on** both `@google/gemini-cli-core` and `@google/gemini-cli-mcp`.
+
+- **`@google/gemini-cli-mcp` (`packages/mcp`)**: This package contains the specific implementation for the Model Context Protocol (MCP) server. It **depends on** `@google/gemini-cli-core` to access core functionalities like the `Config` object.
+
+## 2. Dependency Flow
+
+The dependency flow is strictly hierarchical and one-directional:
 
 ```
 `@google/gemini-cli` (frontend) --> depends on --> `@google/gemini-cli-core` (backend)
@@ -17,9 +22,38 @@ The fundamental rule of our architecture is **unidirectional dependency flow**:
 
 **Crucially, the `@google/gemini-cli-core` package MUST NEVER import from the `@google/gemini-cli` package.** This prevents circular dependencies and keeps the backend logic independent of the UI implementation.
 
-## How to Import
+```
++------------------------+
+|                        |
+|   packages/cli         |
+|                        |
++-----------+------------+
+            |
+            v
++-----------+------------+
+|                        |
+|   packages/mcp         |
+|                        |
++-----------+------------+
+            |
+            v
++-----------+------------+
+|                        |
+|   packages/core        |
+|                        |
++------------------------+
+```
 
-### 1. Cross-Package Imports
+- `cli` -> `mcp` (Allowed)
+- `cli` -> `core` (Allowed)
+- `mcp` -> `core` (Allowed)
+- `core` -> `cli` (**FORBIDDEN**)
+- `core` -> `mcp` (**FORBIDDEN**)
+- `mcp` -> `cli` (**FORBIDDEN**)
+
+## 3. How Imports Work
+
+### 3.1. Inter-Package Imports
 
 When you need to import code from one package into another (e.g., using a core utility inside the CLI), **you MUST use the package's name**.
 
@@ -39,7 +73,7 @@ When you need to import code from one package into another (e.g., using a core u
 
 This is made possible by the workspace configuration (e.g., npm/yarn/pnpm workspaces), which links the packages together.
 
-### 2. Intra-Package Imports (Within the Same Package)
+### 3.2. Intra-Package Imports (Within the Same Package)
 
 When importing modules within the same package (e.g., `packages/core` importing from another file in `packages/core`), use relative paths.
 
@@ -55,6 +89,18 @@ When importing modules within the same package (e.g., `packages/core` importing 
   // Do not use the package name for internal imports.
   import { utilityB } from '@google/gemini-cli-core/src/utils/utilityB';
   ```
+
+### 3.3. The Role of `index.ts`
+
+Each package has an `index.ts` file in its root directory (`packages/<name>/index.ts`) that serves as the public API for that package. Any code that needs to be accessible to other packages **must** be exported from this file.
+
+For example, if you create a new function `newFunction` in `packages/core/src/new-feature.ts`, you must add the following line to `packages/core/index.ts` to make it available to the `cli` package:
+
+```typescript
+export { newFunction } from './src/new-feature.js';
+```
+
+By following these patterns, we can avoid the circular dependencies and build errors that have been causing issues.
 
 ## Tool Imports
 

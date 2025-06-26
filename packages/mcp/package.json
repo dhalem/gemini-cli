@@ -1,0 +1,13 @@
+{
+  "name": "@google/gemini-cli-mcp",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "node ../../scripts/build_package.js"
+  },
+  "dependencies": {
+    "@google/gemini-cli-core": "file:../core"
+  }
+}
