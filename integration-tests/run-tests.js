@@ -59,7 +59,7 @@ async function main() {
 
   for (const testFile of testFiles) {
     const testFileName = basename(testFile);
-    console.log(`	Found test file: ${testFileName}`);
+    console.log(`\tFound test file: ${testFileName}`);
   }
 
   let allTestsPassed = true;
