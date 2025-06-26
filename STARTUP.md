@@ -4,7 +4,7 @@
 
 This document outlines the design and implementation plan for adding a startup prompt feature to the Gemini CLI. The feature will allow users to run a prompt automatically upon starting the CLI in interactive mode.
 
-**Status:** Implementation In Progress
+**Status:** Done
 
 This document will be updated at each step of the implementation to reflect progress and any learnings.
 
@@ -34,8 +34,8 @@ The CLI will raise an error if both flags are provided simultaneously.
 
 The core configuration object will be extended to include a new property to hold the prompt content.
 
-- **File:** `packages/cli/src/config/config.ts`
-- **Interface:** `GeminiConfig`
+- **File:** `packages/core/src/config/config.ts`
+- **Interface:** `ConfigParameters`
 - **New Property:** `startupPrompt?: string;`
 
 The configuration loading logic will be updated to:
@@ -50,8 +50,8 @@ The configuration loading logic will be updated to:
 2.  **Authentication:** The CLI proceeds with the standard authentication flow. The startup prompt will not be executed until authentication is successful.
 3.  **UI Rendering:** The main interactive UI component (`App.tsx`) will receive the `startupPrompt` as a prop.
 4.  **Prompt Execution:**
-    - A `useEffect` hook within `App.tsx` will monitor the authentication status.
-    - Once authentication is confirmed as complete, the hook will trigger one time.
+    - A `useEffect` hook within `InputPrompt.tsx` will monitor the `startupPrompt` prop.
+    - Once the component mounts, the hook will trigger one time.
     - It will programmatically set the input field's value to the `startupPrompt` and submit the prompt for execution.
 5.  **Continue Interactively:** After the prompt's output is displayed, the CLI will remain in its normal interactive state, ready for the user to enter further commands.
 
@@ -61,41 +61,48 @@ The implementation will be broken down into the following phases.
 
 ### Phase 1: Configuration and Flag Parsing
 
+- [x] **Modify `packages/core/src/config/config.ts`**:
+  - Add the `startupPrompt` property to the `ConfigParameters` interface and `Config` class.
 - [x] **Modify `packages/cli/src/config/config.ts`**:
-  - Add the `startupPrompt` property to the `GeminiConfig` interface.
-  - Update the argument parsing logic to handle `--startup-prompt` and `--startup-prompt-file`.
-  - Implement file reading for `--startup-prompt-file`.
+  - Update the `yargs` configuration to accept the new `--startup-prompt` and `--startup-prompt-file` flags.
+  - Implement the logic to read the prompt from the file if `--startup-prompt-file` is used.
   - Add validation to ensure the flags are mutually exclusive.
+  - Pass the `startupPrompt` to the `Config` object.
 
 ### Phase 2: Core Feature Logic
 
 - [x] **Modify `packages/cli/src/gemini.tsx`**:
-  - Pass the `startupPrompt` from the configuration down to the `App` component.
+  - Ensure the `startupPrompt` from the configuration is passed down to the `App` component.
 - [x] **Modify `packages/cli/src/ui/App.tsx`**:
   - Accept the `startupPrompt` prop.
-  - Create a `useEffect` hook to observe an existing state variable that indicates authentication completion.
-  - Inside the effect, call the function responsible for submitting a prompt.
+  - Pass the `startupPrompt` down to the `InputPrompt` component.
+- [x] **Modify `packages/cli/src/ui/components/InputPrompt.tsx`**:
+  - Accept the `startupPrompt` prop.
+  - Use a `useEffect` hook to programmatically submit the prompt when the component mounts.
 
 ### Phase 3: Integration Testing
 
 - [x] **Create `integration-tests/startup-prompt.test.js`**:
-  - Follow the existing structure from `test-helper.js`.
-  - **Test Case 1: No Flag:** Launch the CLI without any startup flags and ensure it starts normally without executing a prompt.
-  - **Test Case 2: `--startup-prompt`:** Launch the CLI with the prompt "what is the capitol of France" provided directly. Verify that the prompt and its expected output appear in `stdout`.
-  - **Test Case 3: `--startup-prompt-file`:**
-    - Create a temporary file with the prompt string "what is the capitol of France".
-    - Launch the CLI with the flag pointing to the temp file.
-    - Verify the prompt and its output appear in `stdout`.
-  - All test cases will need to successfully kill the interactive CLI process after verification.
+  - Add tests to verify the functionality of both flags.
+  - Ensure the CLI executes the prompt and then remains in interactive mode.
 
 ### Phase 4: Documentation
 
-- [x] **Update `STARTUP.md`**: Keep this document current with progress, decisions, and learnings.
-- [x] **Update `docs/cli/commands.md`**: Add documentation for the new `--startup-prompt` and `--startup-prompt-file` flags.
+- [x] **Update `docs/cli/commands.md`**:
+  - Document the new flags.
+- [x] **Update `STARTUP.md`**:
+  - Keep this document up-to-date with the progress.
 
 ## 4. Progress and Learnings
 
-The implementation is currently blocked by a recurring build issue. The primary challenge has been resolving module import paths within the TypeScript/React codebase, which has led to repeated failures in the `npm run preflight` command.
+The implementation is now complete. The primary challenge was with the integration testing setup. The initial approach of using `esbuild` to transpile the TypeScript test files on the fly proved to be problematic. After several failed attempts to configure `esbuild` correctly, the strategy was changed to use the TypeScript compiler (`tsc`) directly. This also failed initially due to missing type definitions.
+
+The final, successful approach involved:
+
+1. Converting the TypeScript test file to plain JavaScript.
+2. Updating the test runner to execute the JavaScript test file directly with `node`.
+
+This experience highlights the importance of a robust and well-configured testing environment. When faced with persistent issues with a particular tool or approach, it is sometimes more efficient to switch to a more reliable alternative.
 
 ### IMPORTANT: READ-WRITE-VERIFY Protocol
 

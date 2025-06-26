@@ -53,13 +53,13 @@ async function main() {
 
   const testPatterns =
     args.length > 0
-      ? args.map((arg) => `integration-tests/${arg}.test.js`)
+      ? args.map((arg) => `integration-tests/${arg}`)
       : ['integration-tests/*.test.js'];
   const testFiles = glob.sync(testPatterns, { cwd: rootDir, absolute: true });
 
   for (const testFile of testFiles) {
     const testFileName = basename(testFile);
-    console.log(`\tFound test file: ${testFileName}`);
+    console.log(`	Found test file: ${testFileName}`);
   }
 
   let allTestsPassed = true;

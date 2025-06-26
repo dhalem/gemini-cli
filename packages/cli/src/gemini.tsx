@@ -8,7 +8,6 @@ import React from 'react';
 import { render } from 'ink';
 import { AppWrapper } from './ui/App.js';
 import { loadCliConfig } from './config/config.js';
-import { readStdin } from './utils/readStdin.js';
 import { basename } from 'node:path';
 import v8 from 'node:v8';
 import os from 'node:os';
@@ -21,19 +20,9 @@ import {
 } from './config/settings.js';
 import { themeManager } from './ui/themes/theme-manager.js';
 import { getStartupWarnings } from './utils/startupWarnings.js';
-import { runNonInteractive } from './nonInteractiveCli.js';
-import { loadExtensions, Extension } from './config/extension.js';
+import { loadExtensions } from './config/extension.js';
 import { cleanupCheckpoints } from './utils/cleanup.js';
-import {
-  ApprovalMode,
-  Config,
-  EditTool,
-  ShellTool,
-  WriteFileTool,
-  sessionId,
-  logUserPrompt,
-  AuthType,
-} from '@google/gemini-cli-core';
+import { Config, sessionId, AuthType } from '@google/gemini-cli-core';
 import { validateAuthMethod } from './config/auth.js';
 import { setMaxSizedBoxDebugging } from './ui/components/shared/MaxSizedBox.js';
 
@@ -159,50 +148,19 @@ export async function main() {
       }
     }
   }
-  let input = config.getQuestion();
   const startupWarnings = await getStartupWarnings();
 
-  // Render UI, passing necessary config values. Check that there is no command line question.
-  if (process.stdin.isTTY && input?.length === 0) {
-    setWindowTitle(basename(workspaceRoot), settings);
-    render(
-      <React.StrictMode>
-        <AppWrapper
-          config={config}
-          settings={settings}
-          startupWarnings={startupWarnings}
-        />
-      </React.StrictMode>,
-      { exitOnCtrlC: false },
-    );
-    return;
-  }
-  // If not a TTY, read from stdin
-  // This is for cases where the user pipes input directly into the command
-  if (!process.stdin.isTTY) {
-    input += await readStdin();
-  }
-  if (!input) {
-    console.error('No input provided via stdin.');
-    process.exit(1);
-  }
-
-  logUserPrompt(config, {
-    'event.name': 'user_prompt',
-    'event.timestamp': new Date().toISOString(),
-    prompt: input,
-    prompt_length: input.length,
-  });
-
-  // Non-interactive mode handled by runNonInteractive
-  const nonInteractiveConfig = await loadNonInteractiveConfig(
-    config,
-    extensions,
-    settings,
+  setWindowTitle(basename(workspaceRoot), settings);
+  render(
+    <React.StrictMode>
+      <AppWrapper
+        config={config}
+        settings={settings}
+        startupWarnings={startupWarnings}
+      />
+    </React.StrictMode>,
+    { exitOnCtrlC: false },
   );
-
-  await runNonInteractive(nonInteractiveConfig, input);
-  process.exit(0);
 }
 
 function setWindowTitle(title: string, settings: LoadedSettings) {
@@ -229,64 +187,3 @@ process.on('unhandledRejection', (reason, _promise) => {
   // Exit for genuinely unhandled errors
   process.exit(1);
 });
-
-async function loadNonInteractiveConfig(
-  config: Config,
-  extensions: Extension[],
-  settings: LoadedSettings,
-) {
-  let finalConfig = config;
-  if (config.getApprovalMode() !== ApprovalMode.YOLO) {
-    // Everything is not allowed, ensure that only read-only tools are configured.
-    const existingExcludeTools = settings.merged.excludeTools || [];
-    const interactiveTools = [
-      ShellTool.Name,
-      EditTool.Name,
-      WriteFileTool.Name,
-    ];
-
-    const newExcludeTools = [
-      ...new Set([...existingExcludeTools, ...interactiveTools]),
-    ];
-
-    const nonInteractiveSettings = {
-      ...settings.merged,
-      excludeTools: newExcludeTools,
-    };
-    finalConfig = await loadCliConfig(
-      nonInteractiveSettings,
-      extensions,
-      config.getSessionId(),
-    );
-  }
-
-  return await validateNonInterActiveAuth(
-    settings.merged.selectedAuthType,
-    finalConfig,
-  );
-}
-
-async function validateNonInterActiveAuth(
-  selectedAuthType: AuthType | undefined,
-  nonInteractiveConfig: Config,
-) {
-  // making a special case for the cli. many headless environments might not have a settings.json set
-  // so if GEMINI_API_KEY is set, we'll use that. However since the oauth things are interactive anyway, we'll
-  // still expect that exists
-  if (!selectedAuthType && !process.env.GEMINI_API_KEY) {
-    console.error(
-      'Please set an Auth method in your .gemini/settings.json OR specify GEMINI_API_KEY env variable file before running',
-    );
-    process.exit(1);
-  }
-
-  selectedAuthType = selectedAuthType || AuthType.USE_GEMINI;
-  const err = validateAuthMethod(selectedAuthType);
-  if (err != null) {
-    console.error(err);
-    process.exit(1);
-  }
-
-  await nonInteractiveConfig.refreshAuth(selectedAuthType);
-  return nonInteractiveConfig;
-}

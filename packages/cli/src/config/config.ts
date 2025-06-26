@@ -45,6 +45,8 @@ interface CliArgs {
   'sandbox-image': string | undefined;
   debug: boolean | undefined;
   prompt: string | undefined;
+  'startup-prompt': string | undefined;
+  'startup-prompt-file': string | undefined;
   all_files: boolean | undefined;
   show_memory_usage: boolean | undefined;
   yolo: boolean | undefined;
@@ -67,6 +69,14 @@ async function parseArguments(): Promise<CliArgs> {
       alias: 'p',
       type: 'string',
       description: 'Prompt. Appended to input on stdin (if any).',
+    })
+    .option('startup-prompt', {
+      type: 'string',
+      description: 'Run a prompt at startup in interactive mode.',
+    })
+    .option('startup-prompt-file', {
+      type: 'string',
+      description: 'Run a prompt from a file at startup in interactive mode.',
     })
     .option('sandbox', {
       alias: 's',
@@ -197,6 +207,21 @@ export async function loadCliConfig(
 
   const sandboxConfig = await loadSandboxConfig(settings, argv);
 
+  if (argv['startup-prompt'] && argv['startup-prompt-file']) {
+    throw new Error(
+      '--startup-prompt and --startup-prompt-file are mutually exclusive.',
+    );
+  }
+
+  let startupPrompt = argv['startup-prompt'];
+  if (argv['startup-prompt-file']) {
+    try {
+      startupPrompt = fs.readFileSync(argv['startup-prompt-file'], 'utf-8');
+    } catch (e) {
+      throw new Error(`Unable to read startup prompt file: ${e}`);
+    }
+  }
+
   return new Config({
     sessionId,
     embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
@@ -204,6 +229,7 @@ export async function loadCliConfig(
     targetDir: process.cwd(),
     debugMode,
     question: argv.prompt || '',
+    startupPrompt,
     fullContext: argv.all_files || false,
     coreTools: settings.coreTools || undefined,
     excludeTools: settings.excludeTools || undefined,

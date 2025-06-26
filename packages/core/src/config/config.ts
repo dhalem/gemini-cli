@@ -100,6 +100,7 @@ export interface ConfigParameters {
   targetDir: string;
   debugMode: boolean;
   question?: string;
+  startupPrompt?: string;
   fullContext?: boolean;
   coreTools?: string[];
   excludeTools?: string[];
@@ -137,6 +138,7 @@ export class Config {
   private readonly targetDir: string;
   private readonly debugMode: boolean;
   private readonly question: string | undefined;
+  private readonly startupPrompt: string | undefined;
   private readonly fullContext: boolean;
   private readonly coreTools: string[] | undefined;
   private readonly excludeTools: string[] | undefined;
@@ -175,6 +177,7 @@ export class Config {
     this.targetDir = path.resolve(params.targetDir);
     this.debugMode = params.debugMode;
     this.question = params.question;
+    this.startupPrompt = params.startupPrompt;
     this.fullContext = params.fullContext ?? false;
     this.coreTools = params.coreTools;
     this.excludeTools = params.excludeTools;
@@ -317,6 +320,10 @@ export class Config {
   }
   getQuestion(): string | undefined {
     return this.question;
+  }
+
+  getStartupPrompt(): string | undefined {
+    return this.startupPrompt;
   }
 
   getFullContext(): boolean {
