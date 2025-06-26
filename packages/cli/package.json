@@ -5,7 +5,8 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "gemini": "dist/index.js"
+    "gemini": "dist/index.js",
+    "gemini-mcp": "dist/mcp.js"
   },
   "scripts": {
     "build": "node ../../scripts/build_package.js",
@@ -29,7 +30,6 @@
   },
   "dependencies": {
     "@google/gemini-cli-core": "0.1.1",
-    "@google/gemini-cli-mcp": "file:../mcp",
     "@types/update-notifier": "^6.0.8",
     "command-exists": "^1.2.9",
     "diff": "^7.0.0",
