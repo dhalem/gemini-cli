@@ -104,6 +104,7 @@ describe('InputPrompt', () => {
       inputWidth: 80,
       suggestionsWidth: 80,
       focus: true,
+      onStartupPromptHandled: vi.fn(),
     };
   });
 
@@ -182,6 +183,30 @@ describe('InputPrompt', () => {
     expect(mockInputHistory.navigateUp).toHaveBeenCalled();
     expect(mockInputHistory.navigateDown).toHaveBeenCalled();
     expect(props.onSubmit).toHaveBeenCalledWith('some text');
+    unmount();
+  });
+
+  it('should only submit the startup prompt once', async () => {
+    const startupProps = {
+      ...props,
+      startupPrompt: 'startup',
+      isInitialized: true,
+    };
+    const { rerender, unmount } = render(<InputPrompt {...startupProps} />);
+
+    await wait();
+
+    expect(startupProps.onSubmit).toHaveBeenCalledTimes(1);
+    expect(startupProps.onSubmit).toHaveBeenCalledWith('startup');
+    expect(startupProps.onStartupPromptHandled).toHaveBeenCalledTimes(1);
+
+    // Re-render with the same props, should not trigger again
+    rerender(<InputPrompt {...startupProps} />);
+    await wait();
+
+    expect(startupProps.onSubmit).toHaveBeenCalledTimes(1);
+    expect(startupProps.onStartupPromptHandled).toHaveBeenCalledTimes(1);
+
     unmount();
   });
 });

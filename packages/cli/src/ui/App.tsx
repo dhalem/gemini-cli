@@ -88,7 +88,7 @@ export const AppWrapper = (props: AppProps) => (
 const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const { stdout } = useStdout();
-  const [isReadyForInput, setIsReadyForInput] = useState(false);
+  const [startupPrompt, setStartupPrompt] = useState(config.getStartupPrompt());
 
   useEffect(() => {
     checkForUpdates().then(setUpdateMessage);
@@ -129,6 +129,11 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
   const [ctrlDPressedOnce, setCtrlDPressedOnce] = useState(false);
   const ctrlDTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [constrainHeight, setConstrainHeight] = useState<boolean>(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    setIsInitialized(true);
+  }, []);
 
   const errorCount = useMemo(
     () => consoleMessages.filter((msg) => msg.type === 'error').length,
@@ -150,12 +155,6 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
     isAuthenticating,
     cancelAuthentication,
   } = useAuthCommand(settings, setAuthError, config);
-
-  useEffect(() => {
-    if (!isAuthenticating) {
-      setIsReadyForInput(true);
-    }
-  }, [isAuthenticating]);
 
   useEffect(() => {
     if (settings.merged.selectedAuthType) {
@@ -795,9 +794,9 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
                   slashCommands={slashCommands}
                   shellModeActive={shellModeActive}
                   setShellModeActive={setShellModeActive}
-                  startupPrompt={
-                    isReadyForInput ? config.getStartupPrompt() : undefined
-                  }
+                  startupPrompt={startupPrompt}
+                  isInitialized={isInitialized}
+                  onStartupPromptHandled={() => setStartupPrompt(undefined)}
                 />
               )}
             </>

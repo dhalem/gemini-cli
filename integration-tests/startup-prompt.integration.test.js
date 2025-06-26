@@ -20,41 +20,49 @@ describe('gemini --startup-prompt interactive', () => {
     testDir = makeTestDir();
   });
 
-  it('should run a startup prompt and wait for the answer "Paris"', async () => {
-    const { ptyProcess, waitFor } = geminiInteractive([
+  it('should run a startup prompt and then wait for user input', async () => {
+    const { ptyProcess, waitFor, write } = geminiInteractive([
       '--startup-prompt',
       'what is the capitol of France',
     ]);
 
-    const output = await waitFor('Paris');
+    // 1. Wait for the answer to the startup prompt.
+    await waitFor('Paris');
 
-    assert.ok(output.includes('Paris'));
+    // 2. Wait for the interactive prompt to appear.
+    await waitFor('>');
+
+    // 3. Write a new prompt.
+    write('what is the capitol of Spain');
+
+    // 4. Wait for the answer to the new prompt.
+    const output = await waitFor('Madrid');
+
+    assert.ok(output.includes('Madrid'));
     ptyProcess.kill();
   });
 
-  it('should run a startup prompt from a file and wait for the answer "Paris"', async () => {
+  it('should run a startup prompt from a file and then wait for user input', async () => {
     const promptFile = path.join(testDir, 'prompt.txt');
     fs.writeFileSync(promptFile, 'what is the capitol of France');
-    const { ptyProcess, waitFor } = geminiInteractive([
+    const { ptyProcess, waitFor, write } = geminiInteractive([
       '--startup-prompt-file',
       promptFile,
     ]);
 
-    const output = await waitFor('Paris');
+    // 1. Wait for the answer to the startup prompt.
+    await waitFor('Paris');
 
-    assert.ok(output.includes('Paris'));
-    ptyProcess.kill();
-  });
+    // 2. Wait for the interactive prompt to appear.
+    await waitFor('>');
 
-  it('should run a startup prompt and wait for the answer "Rome"', async () => {
-    const { ptyProcess, waitFor } = geminiInteractive([
-      '--startup-prompt',
-      'what is the capitol of Italy',
-    ]);
+    // 3. Write a new prompt.
+    write('what is the capitol of Spain');
 
-    const output = await waitFor('Rome');
+    // 4. Wait for the answer to the new prompt.
+    const output = await waitFor('Madrid');
 
-    assert.ok(output.includes('Rome'));
+    assert.ok(output.includes('Madrid'));
     ptyProcess.kill();
   });
 
