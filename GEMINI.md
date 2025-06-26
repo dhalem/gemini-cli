@@ -1,3 +1,13 @@
+# Gemini CLI Development Guide
+
+This document contains critical information for developing the Gemini CLI.
+
+## Core Instructions
+
+**You must follow all instructions in `RULES.md` without exception.** This is the primary source of truth for your operational protocols.
+
+**If you are stuck or in a loop, you must re-read all `.md` files in the project root directory.** This will ensure you have the most up-to-date context and are not missing any critical information.
+
 ## Building and running
 
 Before submitting any changes, it is crucial to validate them by running the full preflight check. This command will build the repository, run all tests, check for type errors, and lint the code.
@@ -90,6 +100,7 @@ Rather than relying on Java-esque private or public class members, which can be 
 TypeScript's power lies in its ability to provide static type checking, catching potential errors before your code runs. To fully leverage this, it's crucial to avoid the `any` type and be judicious with type assertions.
 
 - **The Dangers of `any`**: Using any effectively opts out of TypeScript's type checking for that particular variable or expression. While it might seem convenient in the short term, it introduces significant risks:
+
   - **Loss of Type Safety**: You lose all the benefits of type checking, making it easy to introduce runtime errors that TypeScript would otherwise have caught.
   - **Reduced Readability and Maintainability**: Code with `any` types is harder to understand and maintain, as the expected type of data is no longer explicitly defined.
   - **Masking Underlying Issues**: Often, the need for any indicates a deeper problem in the design of your code or the way you're interacting with external libraries. It's a sign that you might need to refine your types or refactor your code.
@@ -161,6 +172,7 @@ Design for a good user experience - Provide clear, minimal, and non-blocking UI 
 ### Process
 
 1. Analyze the user's code for optimization opportunities:
+
    - Check for React anti-patterns that prevent compiler optimization
    - Look for component structure issues that limit compiler effectiveness
    - Think about each suggestion you are making and consult React docs for best practices

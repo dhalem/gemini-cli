@@ -92,6 +92,7 @@ export async function executeToolCall(
   } catch (e) {
     const error = e instanceof Error ? e : new Error(String(e));
     const durationMs = Date.now() - startTime;
+    const fullError = `${error.message}\n${error.stack}`;
     logToolCall(config, {
       'event.name': 'tool_call',
       'event.timestamp': new Date().toISOString(),
@@ -99,7 +100,7 @@ export async function executeToolCall(
       function_args: toolCallRequest.args,
       duration_ms: durationMs,
       success: false,
-      error: error.message,
+      error: fullError,
     });
     return {
       callId: toolCallRequest.callId,
@@ -108,11 +109,11 @@ export async function executeToolCall(
           functionResponse: {
             id: toolCallRequest.callId,
             name: toolCallRequest.name,
-            response: { error: error.message },
+            response: { error: fullError },
           },
         },
       ],
-      resultDisplay: error.message,
+      resultDisplay: fullError,
       error,
     };
   }
