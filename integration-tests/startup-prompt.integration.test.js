@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { geminiInteractive } from './test-helper-interactive.js';
+import { geminiInteractive } from './interactive-test-helper.js';
 import { it, describe, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import * as fs from 'fs';
@@ -26,8 +26,10 @@ describe('gemini --startup-prompt interactive', () => {
       'what is the capitol of France',
     ]);
 
+    await waitFor('>');
+    await waitFor('what is the capitol of France');
     const output = await waitFor('Paris');
-    fs.writeFileSync(path.join(testDir, 'output.log'), output);
+
     assert.ok(output.includes('Paris'));
     ptyProcess.kill();
   });
@@ -40,8 +42,10 @@ describe('gemini --startup-prompt interactive', () => {
       promptFile,
     ]);
 
+    await waitFor('>');
+    await waitFor('what is the capitol of France');
     const output = await waitFor('Paris');
-    fs.writeFileSync(path.join(testDir, 'output.log'), output);
+
     assert.ok(output.includes('Paris'));
     ptyProcess.kill();
   });
@@ -52,8 +56,10 @@ describe('gemini --startup-prompt interactive', () => {
       'what is the capitol of Italy',
     ]);
 
+    await waitFor('>');
+    await waitFor('what is the capitol of Italy');
     const output = await waitFor('Rome');
-    fs.writeFileSync(path.join(testDir, 'output.log'), output);
+
     assert.ok(output.includes('Rome'));
     ptyProcess.kill();
   });
