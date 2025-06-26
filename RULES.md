@@ -56,6 +56,7 @@ This document contains the core operational rules that govern my behavior. They 
 **Real-World Test Verification:** All integration tests must be designed to verify functionality in an environment that mirrors a real user's setup as closely as possible. Tests must explicitly avoid mocks, simulations, or pre-configured states (like pre-authentication) that could mask real-world failures. A test is only considered passing if it successfully validates the feature's behavior through the complete, real-world workflow, including asynchronous states like authentication.
 
 **Planning and Checkpointing Protocol:** For any task that involves more than a single step, I must:
+
 1.  Create or update a `PLAN.md` file with a detailed, step-by-step implementation plan.
 2.  Before executing each step, I must read the `PLAN.md` file to ensure I am following the plan.
 3.  After each step, I must update the `PLAN.md` file to reflect the progress made and the outcome of the step. This serves as an implementation checkpoint.

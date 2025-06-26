@@ -92,7 +92,7 @@ export async function executeToolCall(
   } catch (e) {
     const error = e instanceof Error ? e : new Error(String(e));
     const durationMs = Date.now() - startTime;
-    const fullError = `${error.message}\n${error.stack}`;
+    const fullError = `${error.message}`;
     logToolCall(config, {
       'event.name': 'tool_call',
       'event.timestamp': new Date().toISOString(),

@@ -6,8 +6,7 @@
 
 import { spawn } from 'child_process';
 import { mkdtempSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { tmpdir } from 'os';
 
 export function spawnCli(args) {

@@ -21,7 +21,7 @@ To fix all failing tests and ensure the `main` branch is stable and the build pa
 
 **Verification:** Run `npm run test:ci --workspace=@google/gemini-cli-core` to confirm that all tests in the `core` package now pass.
 
-**Progress:** Not Started.
+**Progress:** Completed.
 
 ---
 
@@ -34,7 +34,7 @@ To fix all failing tests and ensure the `main` branch is stable and the build pa
 
 **Verification:** Run `npm run test:ci --workspace=@google/gemini-cli` to confirm that all tests in the `cli` package now pass.
 
-**Progress:** Not Started.
+**Progress:** Completed.
 
 ---
 
@@ -46,7 +46,7 @@ To fix all failing tests and ensure the `main` branch is stable and the build pa
 
 **Verification:** The command must complete with zero errors, zero warnings, and all tests passing.
 
-**Progress:** Not Started.
+**Progress:** Completed.
 
 ---
 

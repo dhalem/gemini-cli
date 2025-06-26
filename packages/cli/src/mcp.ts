@@ -5,13 +5,7 @@
  */
 
 import * as readline from 'readline';
-import {
-  createToolRegistry,
-  Config,
-  AuthType,
-  sessionId,
-  GeminiClient,
-} from '@google/gemini-cli-core';
+import { AuthType, sessionId, GeminiClient } from '@google/gemini-cli-core';
 import { loadCliConfig } from './config/config.js';
 import { loadSettings } from './config/settings.js';
 import { loadExtensions } from './config/extension.js';

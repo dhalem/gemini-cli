@@ -7,12 +7,14 @@ This document outlines the design, implementation, and testing plan for creating
 **The Gemini CLI is the main process and the MCP server is a sub-process.** The interactive CLI is responsible for spawning, managing, and communicating with the MCP server. The MCP server is a headless UI for the core CLI logic, and it runs in a separate process to isolate its dependencies and resources.
 
 This means the main `gemini` CLI process **must**:
+
 1.  When started, read the `settings.json` file to discover any configured MCP servers.
 2.  For each configured server, launch the specified command as a sub-process.
 3.  Establish a communication channel with the `gemini-mcp` sub-process (e.g., via stdio).
 4.  Use this channel to send prompts to the MCP server and receive responses.
 
 The `gemini-mcp` sub-process **must**:
+
 1.  Load and initialize the `@google/gemini-cli-core` package.
 2.  Use the `Core` object to manage state, context, and tool execution.
 3.  Process all incoming prompts by passing them directly to the `Core`.
@@ -25,21 +27,21 @@ This plan will be executed in small, verifiable steps. After each file modificat
 ### 2.1. Implementation Steps
 
 1.  **Implement the `gemini-mcp` Server:**
-    *   In `packages/cli/src/mcp.ts`, implement the server logic that:
-        *   Initializes the `@google/gemini-cli-core`.
-        *   Listens for prompts on `stdin`.
-        *   Passes prompts to the `Core`.
-        *   Writes responses to `stdout`.
-    *   **Checkpoint:** Run `npm run build`.
+    - In `packages/cli/src/mcp.ts`, implement the server logic that:
+      - Initializes the `@google/gemini-cli-core`.
+      - Listens for prompts on `stdin`.
+      - Passes prompts to the `Core`.
+      - Writes responses to `stdout`.
+    - **Checkpoint:** Run `npm run build`.
 
 2.  **Configure the MCP Server:**
-    *   In `.gemini/settings.json`, configure the `mcpServers` property to launch the `gemini-mcp` server.
-    *   **Checkpoint:** This is a configuration file, so no build step is needed.
+    - In `.gemini/settings.json`, configure the `mcpServers` property to launch the `gemini-mcp` server.
+    - **Checkpoint:** This is a configuration file, so no build step is needed.
 
 3.  **Create an Integration Test:**
-    *   Create a test script that runs the CLI with the `--prompt` flag.
-    *   The test will verify that the CLI can correctly launch and communicate with the MCP server.
-    *   **Checkpoint:** Run the test and confirm that it passes.
+    - Create a test script that runs the CLI with the `--prompt` flag.
+    - The test will verify that the CLI can correctly launch and communicate with the MCP server.
+    - **Checkpoint:** Run the test and confirm that it passes.
 
 ## 3. Document Maintenance and Learning
 
@@ -51,7 +53,7 @@ For all operational rules, see [RULES.md](RULES.md).
 
 This section will serve as a log of mistakes made during development. Documenting errors helps prevent them from being repeated.
 
-- **(2025-06-26)**: I repeatedly failed to correctly diagnose the root cause of the test failures. I was so focused on the "raw mode" error that I completely missed the more important "Connection closed" error, which indicated that the MCP server was not starting correctly. **Lesson Learned**: I must read the *entire* error message and not just the first error I see. I must also be more diligent about following the "Comprehensive Error Analysis Protocol".
+- **(2025-06-26)**: I repeatedly failed to correctly diagnose the root cause of the test failures. I was so focused on the "raw mode" error that I completely missed the more important "Connection closed" error, which indicated that the MCP server was not starting correctly. **Lesson Learned**: I must read the _entire_ error message and not just the first error I see. I must also be more diligent about following the "Comprehensive Error Analysis Protocol".
 - **(2025-06-26)**: I fundamentally misunderstood the relationship between the CLI and the MCP server. I incorrectly implemented the test harness to launch the CLI as a sub-process of the test, when the CLI should be the main process that launches the MCP server. **Lesson Learned**: I must pay closer attention to the user's requirements and ask for clarification when I am unsure. The CLI is the user-facing application, and any additional components should be managed by it, not the other way around.
 - **(2025-06-26)**: I fundamentally misunderstood the purpose of the MCP server and implemented it as a standalone echo server. **Lesson Learned**: The MCP server is a headless UI for the core CLI logic. It must use the `@google/gemini-cli-core` package to process prompts. I must always ensure I understand the core design principles before implementing any feature.
 - **(2025-06-26)**: I mistakenly deleted the markdown rule files (`RULES.md`, `CLI_MCP.md`, `IMPORTS.md`) by using `git clean -fd`. This was a direct violation of the rules. **Lesson Learned**: I must be extremely careful with destructive commands like `git clean`. I will not use the `-f` flag unless absolutely necessary and will always double-check which files will be affected. I will prioritize preserving rule files above all else.
