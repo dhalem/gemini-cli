@@ -32,28 +32,28 @@ This plan will be executed in small, verifiable steps. After each file modificat
 ### 3.1. Implementation Steps
 
 1.  **Create the `mcp` Package Skeleton**:
-    *   Create the `packages/mcp` directory structure.
-    *   Create `packages/mcp/package.json`.
-    *   Create `packages/mcp/tsconfig.json`.
-    *   Create a placeholder `packages/mcp/index.ts`.
-    *   **Verify**: Run `npm run preflight`.
+    - Create the `packages/mcp` directory structure.
+    - Create `packages/mcp/package.json`.
+    - Create `packages/mcp/tsconfig.json`.
+    - Create a placeholder `packages/mcp/index.ts`.
+    - **Verify**: Run `npm run preflight`.
 
 2.  **Integrate `mcp` Package into the Workspace**:
-    *   Update the root `tsconfig.json` to include a reference to the new `mcp` package.
-    *   Update `packages/cli/package.json` to add a dependency on `@google/gemini-cli-mcp`.
-    *   Update `packages/cli/tsconfig.json` to reference the `mcp` package.
-    *   **Verify**: Run `npm install` and then `npm run preflight`.
+    - Update the root `tsconfig.json` to include a reference to the new `mcp` package.
+    - Update `packages/cli/package.json` to add a dependency on `@google/gemini-cli-mcp`.
+    - Update `packages/cli/tsconfig.json` to reference the `mcp` package.
+    - **Verify**: Run `npm install` and then `npm run preflight`.
 
 3.  **Implement the MCP Server Logic**:
-    *   Add the core server logic to `packages/mcp/src/index.ts`.
-    *   **Verify**: Run `npm run preflight`.
+    - Add the core server logic to `packages/mcp/src/index.ts`.
+    - **Verify**: Run `npm run preflight`.
 
 4.  **Implement the CLI Changes**:
-    *   Create the new entry point `packages/cli/src/mcp.ts`.
-    *   Add the `gemini-mcp` command to `packages/cli/package.json`.
-    *   Update `packages/cli/src/gemini.tsx` to use the new `mcp` package.
-    *   Add the necessary config flags to `packages/core/src/config/config.ts`.
-    *   **Verify**: Run `npm run preflight`.
+    - Create the new entry point `packages/cli/src/mcp.ts`.
+    - Add the `gemini-mcp` command to `packages/cli/package.json`.
+    - Update `packages/cli/src/gemini.tsx` to use the new `mcp` package.
+    - Add the necessary config flags to `packages/core/src/config/config.ts`.
+    - **Verify**: Run `npm run preflight`.
 
 ### 3.2. Test Plan
 

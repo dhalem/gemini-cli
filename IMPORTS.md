@@ -58,6 +58,7 @@ The dependency flow is strictly hierarchical and one-directional:
 When you need to import code from one package into another (e.g., using a core utility inside the CLI), **you MUST use the package's name**.
 
 - **Correct:**
+
   ```typescript
   // In a file within packages/cli
   import { someFunction } from '@google/gemini-cli-core';
@@ -77,6 +78,7 @@ This is made possible by the workspace configuration (e.g., npm/yarn/pnpm worksp
 When importing modules within the same package (e.g., `packages/core` importing from another file in `packages/core`), use relative paths.
 
 - **Correct:**
+
   ```typescript
   // In packages/core/src/services/serviceA.ts
   import { utilityB } from '../utils/utilityB';
