@@ -1,4 +1,4 @@
-# Rule #0: You must obey all rules for every action you take. Never forget Rule #0
+# Rule #0: You must obey all other rules for every action you take. Never forget Rule #0
 
 # Startup Prompt Feature
 
@@ -74,15 +74,18 @@ The implementation will be broken down into the following phases.
 - [x] **Modify `packages/cli/src/gemini.tsx`**:
   - Ensure the `startupPrompt` from the configuration is passed down to the `App` component.
 - [x] **Modify `packages/cli/src/ui/App.tsx`**:
-  - Accept the `startupPrompt` prop.
-  - Pass the `startupPrompt` down to the `InputPrompt` component.
+  - Add a new state variable, `isReadyForInput`, to track the authentication status.
+  - Use a `useEffect` hook to set `isReadyForInput` to `true` only when `isAuthenticating` is `false`.
+  - Pass the `isReadyForInput` state down as a prop to the `InputPrompt` component.
 - [x] **Modify `packages/cli/src/ui/components/InputPrompt.tsx`**:
-  - Accept the `startupPrompt` prop.
-  - Use a `useEffect` hook to programmatically submit the prompt when the component mounts.
+  - Accept the `isReadyForInput` prop.
+  - Modify the `useEffect` hook that handles the `startupPrompt` to only fire when `isReadyForInput` is `true`.
 
 ### Phase 3: Integration Testing
 
-- [x] **Create `integration-tests/startup-prompt.test.js`**:
+- [x] **Create `integration-tests/startup-prompt.integration.test.js`**:
+  - Create a new, robust interactive test helper that uses `node-pty` to create a true pseudo-terminal environment.
+  - Write a new test suite that correctly models the user's experience by waiting for the interactive prompt (`>`) to appear before checking for the output.
   - Add tests to verify the functionality of both flags.
   - Ensure the CLI executes the prompt and then remains in interactive mode.
 

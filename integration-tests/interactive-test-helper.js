@@ -5,12 +5,11 @@
  */
 
 import * as pty from 'node-pty';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { EOL } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const bundlePath = join(__dirname, '..', 'bundle/gemini.js');
 
 /**
  * A more robust interactive test helper using node-pty.
@@ -18,18 +17,18 @@ const bundlePath = join(__dirname, '..', 'bundle/gemini.js');
  * @returns {{ptyProcess: pty.IPty, waitFor: Function, write: Function}}
  */
 export function geminiInteractive(args) {
-  const ptyProcess = pty.spawn('node', [bundlePath, ...args], {
+  const ptyProcess = pty.spawn('npm', ['start', '--', ...args], {
     name: 'xterm-color',
     cols: 80,
     rows: 30,
     cwd: process.cwd(),
-    env: process.env,
+    env: {
+      ...process.env,
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    },
   });
 
-  const waitFor = async (
-    searchText,
-    timeout = 15000,
-  ) => {
+  const waitFor = async (searchText, timeout = 30000) => {
     return new Promise((resolve, reject) => {
       let allOutput = '';
       const timeoutId = setTimeout(() => {

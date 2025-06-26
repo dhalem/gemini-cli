@@ -7,7 +7,6 @@ This document summarizes the architecture, features, and development practices o
 The Gemini CLI is a monorepo built with TypeScript, composed of two primary packages that create a separation between the user-facing interface and the backend logic.
 
 - **`@google/gemini-cli` (`packages/cli`):** This is the **frontend** package. It is responsible for everything the user sees and interacts with, including:
-
   - Rendering the REPL interface.
   - Handling user input and slash commands (e.g., `/help`, `/theme`).
   - Managing display, themes, and the overall user experience.

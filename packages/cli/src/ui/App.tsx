@@ -88,7 +88,7 @@ export const AppWrapper = (props: AppProps) => (
 const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const { stdout } = useStdout();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isReadyForInput, setIsReadyForInput] = useState(false);
 
   useEffect(() => {
     checkForUpdates().then(setUpdateMessage);
@@ -149,9 +149,13 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
     handleAuthHighlight,
     isAuthenticating,
     cancelAuthentication,
-  } = useAuthCommand(settings, setAuthError, config, () => {
-    setIsAuthenticated(true);
-  });
+  } = useAuthCommand(settings, setAuthError, config);
+
+  useEffect(() => {
+    if (!isAuthenticating) {
+      setIsReadyForInput(true);
+    }
+  }, [isAuthenticating]);
 
   useEffect(() => {
     if (settings.merged.selectedAuthType) {
@@ -159,8 +163,6 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
       if (error) {
         setAuthError(error);
         openAuthDialog();
-      } else {
-        setIsAuthenticated(true);
       }
     }
   }, [settings.merged.selectedAuthType, openAuthDialog, setAuthError]);
@@ -794,7 +796,7 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
                   shellModeActive={shellModeActive}
                   setShellModeActive={setShellModeActive}
                   startupPrompt={
-                    isAuthenticated ? config.getStartupPrompt() : undefined
+                    isReadyForInput ? config.getStartupPrompt() : undefined
                   }
                 />
               )}

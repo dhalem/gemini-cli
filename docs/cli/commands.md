@@ -7,11 +7,9 @@ Gemini CLI supports several built-in commands to help you manage your session, c
 These flags can be used when launching the Gemini CLI to control its initial behavior.
 
 - **`--startup-prompt <prompt-string>`**
-
   - **Description:** Specifies a prompt to run directly from the command line upon startup. The CLI will execute this prompt in interactive mode after authentication is complete and then remain in interactive mode.
 
 - **`--startup-prompt-file <file-path>`**
-
   - **Description:** Specifies a path to a file containing a prompt to run upon startup. The CLI will read the content of the file, execute it as a prompt in interactive mode after authentication is complete, and then remain in interactive mode.
 
 **Note:** `--startup-prompt` and `--startup-prompt-file` are mutually exclusive.

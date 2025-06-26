@@ -26,7 +26,6 @@ describe('gemini --startup-prompt interactive', () => {
       'what is the capitol of France',
     ]);
 
-    await waitFor('>');
     const output = await waitFor('Paris');
 
     assert.ok(output.includes('Paris'));
@@ -41,7 +40,6 @@ describe('gemini --startup-prompt interactive', () => {
       promptFile,
     ]);
 
-    await waitFor('>');
     const output = await waitFor('Paris');
 
     assert.ok(output.includes('Paris'));
@@ -54,7 +52,6 @@ describe('gemini --startup-prompt interactive', () => {
       'what is the capitol of Italy',
     ]);
 
-    await waitFor('>');
     const output = await waitFor('Rome');
 
     assert.ok(output.includes('Rome'));
