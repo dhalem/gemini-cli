@@ -11,7 +11,27 @@ import { fileURLToPath } from 'url';
 import { env } from 'process';
 import { tmpdir } from 'os';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+export function spawnCli(args) {
+  const child = spawn('node', ['packages/cli/dist/index.js', ...args], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  return {
+    process: child,
+    send: (line) => child.stdin.write(line + '\n'),
+    onOutput: (callback) => {
+      child.stdout.on('data', (data) => {
+        callback(data.toString());
+      });
+    },
+    onError: (callback) => {
+      child.stderr.on('data', (data) => {
+        callback(data.toString());
+      });
+    },
+    kill: () => child.kill(),
+  };
+}
 
 function sanitizeTestName(name) {
   return name

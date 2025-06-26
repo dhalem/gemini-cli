@@ -29,3 +29,19 @@ esbuild
     },
   })
   .catch(() => process.exit(1));
+
+esbuild
+  .build({
+    entryPoints: ['packages/cli/src/nonInteractiveCli.ts'],
+    bundle: true,
+    outfile: 'bundle/nonInteractiveCli.js',
+    platform: 'node',
+    format: 'esm',
+    define: {
+      'process.env.CLI_VERSION': JSON.stringify(pkg.version),
+    },
+    banner: {
+      js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url); globalThis.__filename = require('url').fileURLToPath(import.meta.url); globalThis.__dirname = require('path').dirname(globalThis.__filename);`,
+    },
+  })
+  .catch(() => process.exit(1));
