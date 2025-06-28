@@ -483,7 +483,6 @@ export interface ToolDefinition {
   description: string;             // Human-readable description
   parameters: any;                 // JSON schema for parameters
   category?: string;               // Tool category (e.g., "file", "shell", "web")
-  permissions?: string[];          // Required permissions
 }
 ```
 
@@ -655,8 +654,7 @@ export class LocalToolExecutor {
       name: tool.name,
       description: tool.description,
       parameters: tool.schema.parameters,
-      category: this.getToolCategory(tool.name),
-      permissions: this.getToolPermissions(tool.name)
+      category: this.getToolCategory(tool.name)
     }));
   }
   
@@ -673,18 +671,6 @@ export class LocalToolExecutor {
       'web_search': 'web'
     };
     return categories[toolName] || 'misc';
-  }
-  
-  private getToolPermissions(toolName: string): string[] {
-    const permissions: Record<string, string[]> = {
-      'read_file': ['read:filesystem'],
-      'write_file': ['write:filesystem'],
-      'edit': ['write:filesystem'],
-      'shell': ['execute:system'],
-      'web_fetch': ['network:outbound'],
-      'web_search': ['network:outbound']
-    };
-    return permissions[toolName] || [];
   }
   
   async execute(request: ToolExecutionRequest): Promise<ToolExecutionResponse> {
@@ -915,75 +901,26 @@ export abstract class ProtocolClient {
 
 ## Security Considerations
 
-### 1. Tool Access Control
-```typescript
-// packages/cli/src/tools/toolSecurityManager.ts
-export class ToolSecurityManager {
-  private allowedTools = new Set([
-    'read_file', 'write_file', 'ls', 'grep', 'glob',
-    'shell', 'edit', 'web_fetch'
-  ]);
-  
-  private pathRestrictions = {
-    allowedPaths: [process.cwd()],  // Only allow current working directory
-    blockedPaths: ['/etc', '/sys', '/proc']  // Block system directories
-  };
-  
-  validateToolExecution(toolName: string, parameters: any): boolean {
-    // Check if tool is allowed
-    if (!this.allowedTools.has(toolName)) {
-      throw new Error(`Tool not allowed: ${toolName}`);
-    }
-    
-    // Validate file path parameters
-    if (parameters.path || parameters.file) {
-      const path = parameters.path || parameters.file;
-      if (!this.isPathAllowed(path)) {
-        throw new Error(`Path access denied: ${path}`);
-      }
-    }
-    
-    return true;
-  }
-  
-  private isPathAllowed(targetPath: string): boolean {
-    const resolvedPath = path.resolve(targetPath);
-    
-    // Check if path is within allowed directories
-    const isAllowed = this.pathRestrictions.allowedPaths.some(allowedPath =>
-      resolvedPath.startsWith(path.resolve(allowedPath))
-    );
-    
-    // Check if path is in blocked directories
-    const isBlocked = this.pathRestrictions.blockedPaths.some(blockedPath =>
-      resolvedPath.startsWith(blockedPath)
-    );
-    
-    return isAllowed && !isBlocked;
-  }
-}
-```
+### 1. Client-Side Security
+Security is primarily handled on the client side since tools execute locally:
 
-### 2. Tool Request Validation
+- **Tool Registration Control**: Client chooses which tools to register and announce
+- **Existing Tool Validation**: Many tools already have path validation (e.g., ReadFileTool, WriteFileTool)
+- **Process Isolation**: Tools run in client process with user's permissions
+- **Local File System Access**: Tools only access files the user can access
+
+### 2. Basic Tool Validation
 ```typescript
-// Validate tool requests before execution
+// Simple validation before tool execution
 private async validateToolRequest(request: ToolExecutionRequest): Promise<void> {
-  // Rate limiting
-  const clientRequests = this.getClientRequestCount(this.clientId);
-  if (clientRequests > this.rateLimitPerMinute) {
-    throw new Error('Rate limit exceeded for tool execution');
+  // Check if tool exists
+  const tool = this.toolRegistry.getTool(request.tool);
+  if (!tool) {
+    throw new Error(`Unknown tool: ${request.tool}`);
   }
   
-  // Tool-specific validation
-  this.securityManager.validateToolExecution(request.tool, request.parameters);
-  
-  // Log tool execution for audit
-  this.auditLogger.logToolExecution({
-    tool: request.tool,
-    parameters: request.parameters,
-    clientId: this.clientId,
-    timestamp: Date.now()
-  });
+  // Log tool execution for audit (optional)
+  console.log(`Executing tool: ${request.tool}`, request.parameters);
 }
 ```
 
