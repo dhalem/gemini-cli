@@ -9,13 +9,20 @@ import {
   GenerateContentRequest,
   GenerateContentResponse,
   ToolExecutionRequest, 
-  ToolExecutionResponse 
+  ToolExecutionResponse,
+  ToolDiscoveryMessage,
+  ToolDefinition
 } from './types.js';
 import { createGenerateContentRequest } from './messages.js';
 
 export interface GenerateContentParameters {
   contents: any[];
   config?: any;
+}
+
+export interface LocalToolExecutor {
+  getToolDefinitions(): ToolDefinition[];
+  execute(request: ToolExecutionRequest): Promise<ToolExecutionResponse>;
 }
 
 export abstract class ProtocolClient {
@@ -26,16 +33,14 @@ export abstract class ProtocolClient {
   
   private toolRequestHandler?: (request: ToolExecutionRequest) => Promise<ToolExecutionResponse>;
   private pendingRequests = new Map<string, (response: any) => void>();
+  private toolExecutor?: LocalToolExecutor;
   
   protected handleMessage(message: ProtocolMessage): void {
     console.log('[Protocol Client] Handling message:', message?.type, message?.id);
     
     // Handle tool execution requests
-    if (message.type === 'tool_execution_request' && this.toolRequestHandler) {
-      const request = message as ToolExecutionRequest;
-      this.toolRequestHandler(request)
-        .then(response => this.sendMessage(response))
-        .catch(error => console.error('Tool execution failed:', error));
+    if (message.type === 'tool_execution_request') {
+      this.handleToolRequest(message as ToolExecutionRequest);
       return;
     }
     
@@ -88,5 +93,65 @@ export abstract class ProtocolClient {
   
   onToolRequest(handler: (request: ToolExecutionRequest) => Promise<ToolExecutionResponse>): void {
     this.toolRequestHandler = handler;
+  }
+  
+  setupToolExecution(toolExecutor: LocalToolExecutor): void {
+    this.toolExecutor = toolExecutor;
+  }
+  
+  async announceTools(): Promise<void> {
+    if (!this.toolExecutor) {
+      throw new Error('Tool executor not set up - call setupToolExecution first');
+    }
+    
+    const toolDefinitions = this.toolExecutor.getToolDefinitions();
+    const discovery: ToolDiscoveryMessage = {
+      id: this.generateId(),
+      type: 'tool_discovery',
+      timestamp: Date.now(),
+      tools: toolDefinitions
+    };
+    
+    await this.sendMessage(discovery);
+    console.log(`[Protocol Client] Announced ${toolDefinitions.length} tools to server`);
+  }
+  
+  private async handleToolRequest(request: ToolExecutionRequest): Promise<void> {
+    try {
+      let response: ToolExecutionResponse;
+      
+      if (this.toolExecutor) {
+        // Use local tool executor
+        response = await this.toolExecutor.execute(request);
+      } else if (this.toolRequestHandler) {
+        // Use legacy handler
+        response = await this.toolRequestHandler(request);
+      } else {
+        console.error('Received tool request but no tool executor or handler configured');
+        response = {
+          id: this.generateId(),
+          type: 'tool_execution_response',
+          timestamp: Date.now(),
+          requestId: request.id,
+          error: 'No tool executor configured'
+        };
+      }
+      
+      await this.sendMessage(response);
+    } catch (error) {
+      console.error('Error executing tool:', error);
+      const errorResponse: ToolExecutionResponse = {
+        id: this.generateId(),
+        type: 'tool_execution_response',
+        timestamp: Date.now(),
+        requestId: request.id,
+        error: error instanceof Error ? error.message : String(error)
+      };
+      await this.sendMessage(errorResponse);
+    }
+  }
+  
+  private generateId(): string {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 }

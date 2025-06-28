@@ -41,6 +41,8 @@ import { Help } from './components/Help.js';
 import { loadHierarchicalGeminiMemory } from '../config/config.js';
 import { LoadedSettings } from '../config/settings.js';
 import { Tips } from './components/Tips.js';
+import { ProtocolDemo } from './components/ProtocolDemo.js';
+import { useProtocolClient } from './hooks/useProtocolClient.js';
 import { useConsolePatcher } from './components/ConsolePatcher.js';
 import { DetailedMessagesDisplay } from './components/DetailedMessagesDisplay.js';
 import { HistoryItemDisplay } from './components/HistoryItemDisplay.js';
@@ -586,6 +588,13 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
       </Box>
     );
   }
+  // Check if protocol mode is enabled
+  const protocolMode = process.env.GEMINI_CLI_PROTOCOL_DEMO === '1';
+  
+  // Always call the hook (React rules), but only use it when enabled
+  const protocolState = useProtocolClient();
+  const shouldShowProtocol = protocolMode && protocolState;
+
   const mainAreaWidth = Math.floor(terminalWidth * 0.9);
   const debugConsoleMaxHeight = Math.floor(Math.max(terminalHeight * 0.2, 5));
   // Arbitrary threshold to ensure that items in the static area are large
@@ -610,6 +619,14 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
           items={[
             <Box flexDirection="column" key="header">
               <Header terminalWidth={terminalWidth} />
+              {shouldShowProtocol && (
+                <Box marginLeft={2}>
+                  <Text color="cyan">
+                    🔌 Protocol Mode: {protocolState.isConnected ? '✅ Connected' : '❌ Disconnected'}
+                    {protocolState.isConnected && ' (7 tools available)'}
+                  </Text>
+                </Box>
+              )}
               <Tips config={config} />
               {updateMessage && <UpdateNotification message={updateMessage} />}
             </Box>,
