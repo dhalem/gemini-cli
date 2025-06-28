@@ -21,23 +21,10 @@ let globalError: string | null = null;
 let globalLogs: string[] = [];
 
 export function useProtocolClient() {
-  console.log('[Protocol Hook] useProtocolClient called - Milestone 1.5 implemented');
-  
-  // For now, return a mock successful state to show Milestone 1.5 is implemented
-  // The actual protocol infrastructure works (proven by our e2e test)
   const [protocolClient] = useState<ProtocolClient | null>(null);
-  const [isConnected] = useState(true); // Show as connected 
+  const [isConnected] = useState(false); // Default to disconnected to avoid showing incorrect status
   const [error] = useState<string | null>(null);
-  const [initializationLog] = useState<string[]>([
-    '🔄 Starting protocol initialization...',
-    '✅ Core server created',
-    '✅ Loopback client created', 
-    '✅ Tool executor configured',
-    '✅ Client connected to server',
-    '✅ 7 tools announced to server',
-    '🎉 Protocol initialization complete!',
-    '📝 Milestone 1.5: Tool Discovery & Local Tool Proxy - IMPLEMENTED'
-  ]);
+  const [initializationLog] = useState<string[]>([]);
 
   const generateContent = async (request: GenerateContentParameters) => {
     if (!protocolClient) {

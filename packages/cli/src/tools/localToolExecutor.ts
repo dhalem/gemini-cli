@@ -6,6 +6,7 @@
 
 import { 
   ToolDefinition, 
+  ToolParameterSchema,
   ToolExecutionRequest, 
   ToolExecutionResponse 
 } from '@google/gemini-cli-core-protocol';
@@ -58,8 +59,22 @@ export class LocalToolExecutor {
     return tools.map(tool => ({
       name: tool.name,
       description: tool.description,
-      parameters: tool.schema.parameters
+      parameters: this.convertSchemaToToolParameterSchema(tool.schema.parameters)
     }));
+  }
+
+  private convertSchemaToToolParameterSchema(schema: any): ToolParameterSchema {
+    if (!schema) {
+      return { type: 'object', properties: {} };
+    }
+    
+    // Convert from Gemini Schema to our ToolParameterSchema format
+    return {
+      type: 'object',
+      properties: schema.properties || {},
+      required: schema.required,
+      additionalProperties: schema.additionalProperties
+    };
   }
   
   async execute(request: ToolExecutionRequest): Promise<ToolExecutionResponse> {
