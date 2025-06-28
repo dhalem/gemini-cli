@@ -5,4 +5,3 @@
  */
 
 export * from './server.js';
-export * from './contentGenerator.js';

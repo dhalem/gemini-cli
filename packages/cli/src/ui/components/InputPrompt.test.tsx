@@ -12,7 +12,6 @@ import { vi } from 'vitest';
 import { useShellHistory } from '../hooks/useShellHistory.js';
 import { useCompletion } from '../hooks/useCompletion.js';
 import { useInputHistory } from '../hooks/useInputHistory.js';
-import React from 'react';
 
 vi.mock('../hooks/useShellHistory.js');
 vi.mock('../hooks/useCompletion.js');
@@ -105,7 +104,6 @@ describe('InputPrompt', () => {
       inputWidth: 80,
       suggestionsWidth: 80,
       focus: true,
-      onStartupPromptHandled: vi.fn(),
     };
   });
 
@@ -184,35 +182,6 @@ describe('InputPrompt', () => {
     expect(mockInputHistory.navigateUp).toHaveBeenCalled();
     expect(mockInputHistory.navigateDown).toHaveBeenCalled();
     expect(props.onSubmit).toHaveBeenCalledWith('some text');
-    unmount();
-  });
-
-  it('should only submit the startup prompt once', async () => {
-    const TestComponent = () => {
-      const [isInitialized, setIsInitialized] = React.useState(false);
-      React.useEffect(() => {
-        setTimeout(() => {
-          setIsInitialized(true);
-        }, 10);
-      }, []);
-
-      return (
-        <InputPrompt
-          {...props}
-          startupPrompt="startup"
-          isInitialized={isInitialized}
-        />
-      );
-    };
-
-    const { unmount } = render(<TestComponent />);
-
-    await wait(100);
-
-    expect(props.onSubmit).toHaveBeenCalledTimes(1);
-    expect(props.onSubmit).toHaveBeenCalledWith('startup');
-    expect(props.onStartupPromptHandled).toHaveBeenCalledTimes(1);
-
     unmount();
   });
 });

@@ -12,20 +12,43 @@ import {
   ToolExecutionRequest, 
   ToolExecutionResponse 
 } from '@google/gemini-cli-core-protocol';
-import { ContentGenerator, createContentGenerator, createContentGeneratorConfig, AuthType } from './contentGenerator.js';
+import { 
+  GeminiClient, 
+  Config, 
+  createContentGeneratorConfig, 
+  AuthType,
+  ToolRegistry 
+} from '@google/gemini-cli-core';
 
 export class CoreServer extends ProtocolServer {
   private messageHandlers: Set<(message: ProtocolMessage, clientId: string) => void> = new Set();
-  private contentGenerator?: ContentGenerator;
+  private geminiClient!: GeminiClient;
   private toolRequestCallback?: (clientId: string, request: ToolExecutionRequest) => Promise<ToolExecutionResponse>;
   
   async start(): Promise<void> {
-    // Initialize content generator with default config
-    const config = await createContentGeneratorConfig(
+    // Create a basic Config instance for the protocol server
+    const config = new Config({
+      sessionId: `protocol-${Date.now()}`,
+      targetDir: process.cwd(),
+      debugMode: false,
+      model: 'gemini-2.0-flash-exp',
+      cwd: process.cwd(),
+      coreTools: [] // Disable all core tools
+    });
+    
+    // Create empty tool registry to avoid tool dependencies
+    const emptyToolRegistry = new ToolRegistry(config);
+    // Manually set the tool registry to avoid the full initialization
+    (config as any).toolRegistry = emptyToolRegistry;
+    
+    const contentGeneratorConfig = await createContentGeneratorConfig(
       undefined, 
       AuthType.USE_GEMINI
     );
-    this.contentGenerator = await createContentGenerator(config);
+    
+    this.geminiClient = new GeminiClient(config);
+    await this.geminiClient.initialize(contentGeneratorConfig);
+    console.log('[Protocol] Gemini client initialized');
   }
   
   async stop(): Promise<void> {
@@ -59,16 +82,14 @@ export class CoreServer extends ProtocolServer {
   }
   
   private async handleGenerateContent(request: GenerateContentRequest, clientId: string): Promise<void> {
+    console.log('[Protocol Server] Handling generate content request:', request.id);
     try {
-      if (!this.contentGenerator) {
-        throw new Error('Content generator not initialized');
-      }
-      
-      // Simple implementation for milestone 1 - just generate content
-      const response = await this.contentGenerator.generateContent({
-        contents: request.contents,
-        ...request.config
-      });
+      const response = await this.geminiClient.generateContent(
+        request.contents,
+        request.config || {},
+        new AbortController().signal
+      );
+      console.log('[Protocol Server] API response received');
       
       const responseMessage: GenerateContentResponse = {
         id: `response-${Date.now()}`,

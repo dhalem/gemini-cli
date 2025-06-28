@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useInput } from 'ink';
 import { useProtocolClient } from '../hooks/useProtocolClient.js';
 
 export function ProtocolDemo() {
@@ -31,6 +31,12 @@ export function ProtocolDemo() {
       setIsLoading(false);
     }
   };
+
+  useInput((input, key) => {
+    if (key.return && !isLoading && isConnected) {
+      runTest();
+    }
+  });
 
   return (
     <Box flexDirection="column" padding={1}>

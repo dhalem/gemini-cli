@@ -1,13 +1,3 @@
-# Gemini CLI Development Guide
-
-This document contains critical information for developing the Gemini CLI.
-
-## Core Instructions
-
-**You must follow all instructions in `RULES.md` without exception.** This is the primary source of truth for your operational protocols.
-
-**If you are stuck or in a loop, you must re-read all `.md` files in the project root directory.** This will ensure you have the most up-to-date context and are not missing any critical information.
-
 ## Building and running
 
 Before submitting any changes, it is crucial to validate them by running the full preflight check. This command will build the repository, run all tests, check for type errors, and lint the code.

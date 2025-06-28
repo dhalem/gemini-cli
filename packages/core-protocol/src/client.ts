@@ -28,6 +28,8 @@ export abstract class ProtocolClient {
   private pendingRequests = new Map<string, (response: any) => void>();
   
   protected handleMessage(message: ProtocolMessage): void {
+    console.log('[Protocol Client] Handling message:', message?.type, message?.id);
+    
     // Handle tool execution requests
     if (message.type === 'tool_execution_request' && this.toolRequestHandler) {
       const request = message as ToolExecutionRequest;
@@ -42,7 +44,11 @@ export abstract class ProtocolClient {
       const response = message as GenerateContentResponse;
       const resolver = this.pendingRequests.get(response.requestId);
       if (resolver) {
-        resolver(response);
+        if (response.error) {
+          resolver({ error: response.error });
+        } else {
+          resolver(response.response);
+        }
         this.pendingRequests.delete(response.requestId);
       }
     }
@@ -50,13 +56,15 @@ export abstract class ProtocolClient {
   
   async generateContent(request: GenerateContentParameters): Promise<any> {
     const message = createGenerateContentRequest(request.contents, request.config);
+    console.log('[Protocol Client] Sending request:', message.id);
     
     return new Promise((resolve, reject) => {
-      this.pendingRequests.set(message.id, (response: GenerateContentResponse) => {
-        if (response.error) {
+      this.pendingRequests.set(message.id, (response: any) => {
+        console.log('[Protocol Client] Received response for:', message.id, response);
+        if (response?.error) {
           reject(new Error(response.error));
         } else {
-          resolve(response.response);
+          resolve(response);
         }
       });
       

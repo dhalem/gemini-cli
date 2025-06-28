@@ -6,30 +6,11 @@
 
 import { spawn } from 'child_process';
 import { mkdtempSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 
-export function spawnCli(args) {
-  const child = spawn('node', ['packages/cli/dist/index.js', ...args], {
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-
-  return {
-    process: child,
-    send: (line) => child.stdin.write(line + '\n'),
-    onOutput: (callback) => {
-      child.stdout.on('data', (data) => {
-        callback(data.toString());
-      });
-    },
-    onError: (callback) => {
-      child.stderr.on('data', (data) => {
-        callback(data.toString());
-      });
-    },
-    kill: () => child.kill(),
-  };
-}
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function getTestHelpers() {
   return {

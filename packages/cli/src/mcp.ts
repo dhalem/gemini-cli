@@ -5,10 +5,6 @@
  */
 
 import * as readline from 'readline';
-import { AuthType, sessionId, GeminiClient } from '@google/gemini-cli-core';
-import { loadCliConfig } from './config/config.js';
-import { loadSettings } from './config/settings.js';
-import { loadExtensions } from './config/extension.js';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -16,22 +12,7 @@ const rl = readline.createInterface({
   terminal: false,
 });
 
-async function main() {
-  const workspaceRoot = process.cwd();
-  const settings = loadSettings(workspaceRoot);
-  const extensions = loadExtensions(workspaceRoot);
-  const config = await loadCliConfig(settings.merged, extensions, sessionId);
-  await config.refreshAuth(AuthType.USE_GEMINI);
-  const client = new GeminiClient(config);
-  await client.initialize(config.getContentGeneratorConfig());
-
-  rl.on('line', async (line) => {
-    const chat = client.getChat();
-    const response = await chat.sendMessage({ message: line });
-    if (response.text) {
-      process.stdout.write(response.text);
-    }
-  });
-}
-
-main();
+rl.on('line', (line) => {
+  // For now, just echo the input back to stdout.
+  process.stdout.write(line);
+});
