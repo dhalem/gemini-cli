@@ -33,9 +33,7 @@ export interface InputPromptProps {
   suggestionsWidth: number;
   shellModeActive: boolean;
   setShellModeActive: (value: boolean) => void;
-  startupPrompt?: string | null;
-  isInitialized?: boolean;
-  onStartupPromptHandled: () => void;
+  startupPrompt?: string;
 }
 
 export const InputPrompt: React.FC<InputPromptProps> = ({
@@ -52,8 +50,6 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   shellModeActive,
   setShellModeActive,
   startupPrompt,
-  isInitialized,
-  onStartupPromptHandled,
 }) => {
   const [justNavigatedHistory, setJustNavigatedHistory] = useState(false);
 
@@ -83,18 +79,11 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   );
 
   useEffect(() => {
-    if (startupPrompt && isInitialized) {
+    if (startupPrompt) {
       buffer.setText(startupPrompt);
       handleSubmitAndClear(startupPrompt);
-      onStartupPromptHandled();
     }
-  }, [
-    startupPrompt,
-    isInitialized,
-    buffer,
-    handleSubmitAndClear,
-    onStartupPromptHandled,
-  ]);
+  }, [startupPrompt, buffer, handleSubmitAndClear]);
 
   const customSetTextAndResetCompletionSignal = useCallback(
     (newText: string) => {
