@@ -444,11 +444,57 @@ Streams generated content back to the client.
 [Detailed protocol specification]
 ```
 
-# Tool Proxy Architecture
+# Milestone 1: Implementation Complete ✅
+
+Milestone 1 has been successfully implemented and tested with:
+
+## ✅ What Works
+- **Protocol Foundation**: `core-protocol` and `core-server` packages created
+- **Loopback Communication**: Client/server separation in same process
+- **Real API Integration**: Uses original `GeminiClient` with empty tool registry
+- **Message Protocol**: Request/response pattern for content generation
+- **Working Demo**: Protocol successfully calls real Gemini API
+
+## 📁 Package Structure
+```
+packages/core-protocol/     # Protocol types, client abstractions, loopback
+packages/core-server/       # Server implementation with GeminiClient
+packages/cli/               # Updated to use protocol client (demo mode)
+```
+
+## 🧪 Testing
+- **Integration test**: `test-protocol.js` validates end-to-end flow
+- **Real API calls**: Successfully tested with actual Gemini API keys
+- **Protocol messaging**: Request/response flow working correctly
+
+## 🎯 Current Status
+- Client creates `GenerateContentRequest` 
+- Server processes with `GeminiClient.generateContent()`
+- Response returned via `GenerateContentResponse`
+- **No tools**: Uses empty tool registry to avoid dependencies
+
+**Ready for Milestone 1.5: Tool Discovery & Local Tool Proxy**
+
+---
+
+# Milestone 1.5: Tool Discovery & Local Tool Proxy
+
+**Goal**: Add tool discovery and local tool execution to the working Milestone 1 protocol
 
 ## Overview
 
-The tool proxy system enables the server (which runs the Gemini API and agent logic) to execute tools on the client machine while maintaining security and local file system access. This is essential for the decoupled architecture where tools like file operations, shell commands, and local resources must remain on the client side.
+Building on Milestone 1's working protocol, this milestone adds the ability for:
+- **Client to announce available tools** when connecting
+- **Server to execute tools locally** via the protocol 
+- **Foundation for tool proxy** pattern needed for separate processes
+
+This keeps the same loopback communication but adds tool functionality, bridging the gap between basic protocol (M1) and separate processes (M2).
+
+## Key Changes from Milestone 1
+- Add tool discovery protocol messages
+- Replace empty tool registry with real tools
+- Add local tool execution through protocol
+- Server can now use file operations, shell commands, etc.
 
 ## Architecture
 
@@ -482,7 +528,6 @@ export interface ToolDefinition {
   name: string;                    // Tool identifier (e.g., "read_file")
   description: string;             // Human-readable description
   parameters: any;                 // JSON schema for parameters
-  category?: string;               // Tool category (e.g., "file", "shell", "web")
 }
 ```
 
@@ -490,9 +535,8 @@ export interface ToolDefinition {
 ```typescript
 export interface ToolExecutionRequest extends ProtocolMessage {
   type: 'tool_execution_request';
-  tool: string;               // Tool name (e.g., "read_file")
-  parameters: any;            // Tool-specific parameters
-  executionId: string;        // Unique ID for this execution
+  tool: string;                        // Tool name (e.g., "read_file")
+  parameters: Record<string, any>;     // Tool-specific parameters
 }
 ```
 
@@ -501,13 +545,8 @@ export interface ToolExecutionRequest extends ProtocolMessage {
 export interface ToolExecutionResponse extends ProtocolMessage {
   type: 'tool_execution_response';
   requestId: string;          // Links back to the request
-  executionId: string;        // Matches request executionId
   result?: any;               // Tool execution result on success
   error?: string;             // Error message on failure
-  metadata?: {
-    executionTime: number;    // Execution time in milliseconds
-    workingDirectory: string; // Directory where tool was executed
-  };
 }
 ```
 
@@ -536,27 +575,25 @@ export class ToolProxy {
   async executeTool(
     clientId: string, 
     toolName: string, 
-    parameters: any
+    parameters: Record<string, any>
   ): Promise<any> {
-    const executionId = generateId();
     const request: ToolExecutionRequest = {
       id: generateId(),
       type: 'tool_execution_request',
       timestamp: Date.now(),
       tool: toolName,
-      parameters,
-      executionId
+      parameters
     };
     
     return new Promise((resolve, reject) => {
       // Set up timeout
       const timeout = setTimeout(() => {
-        this.pendingRequests.delete(executionId);
+        this.pendingRequests.delete(request.id);
         reject(new Error(`Tool execution timeout: ${toolName}`));
       }, this.timeoutMs);
       
       // Store request handlers
-      this.pendingRequests.set(executionId, {
+      this.pendingRequests.set(request.id, {
         resolve,
         reject,
         timeout
@@ -568,15 +605,15 @@ export class ToolProxy {
   }
   
   handleToolResponse(response: ToolExecutionResponse): void {
-    const pending = this.pendingRequests.get(response.executionId);
+    const pending = this.pendingRequests.get(response.requestId);
     if (!pending) {
-      console.warn(`Received tool response for unknown execution: ${response.executionId}`);
+      console.warn(`Received tool response for unknown request: ${response.requestId}`);
       return;
     }
     
     // Clean up
     clearTimeout(pending.timeout);
-    this.pendingRequests.delete(response.executionId);
+    this.pendingRequests.delete(response.requestId);
     
     // Resolve or reject based on response
     if (response.error) {
@@ -592,7 +629,7 @@ export class ToolProxy {
     
     // Log available tools for debugging
     discovery.tools.forEach(tool => {
-      console.log(`  - ${tool.name}: ${tool.description} (${tool.category})`);
+      console.log(`  - ${tool.name}: ${tool.description}`);
     });
   }
   
@@ -653,29 +690,11 @@ export class LocalToolExecutor {
     return tools.map(tool => ({
       name: tool.name,
       description: tool.description,
-      parameters: tool.schema.parameters,
-      category: this.getToolCategory(tool.name)
+      parameters: tool.schema.parameters
     }));
   }
   
-  private getToolCategory(toolName: string): string {
-    const categories: Record<string, string> = {
-      'read_file': 'file',
-      'write_file': 'file',
-      'edit': 'file',
-      'ls': 'file',
-      'glob': 'file',
-      'grep': 'file',
-      'shell': 'system',
-      'web_fetch': 'web',
-      'web_search': 'web'
-    };
-    return categories[toolName] || 'misc';
-  }
-  
   async execute(request: ToolExecutionRequest): Promise<ToolExecutionResponse> {
-    const startTime = Date.now();
-    
     try {
       const tool = this.toolRegistry.getTool(request.tool);
       if (!tool) {
@@ -683,34 +702,21 @@ export class LocalToolExecutor {
       }
       
       const result = await tool.execute(request.parameters);
-      const executionTime = Date.now() - startTime;
       
       return {
         id: generateId(),
         type: 'tool_execution_response',
         timestamp: Date.now(),
         requestId: request.id,
-        executionId: request.executionId,
-        result,
-        metadata: {
-          executionTime,
-          workingDirectory: process.cwd()
-        }
+        result
       };
     } catch (error) {
-      const executionTime = Date.now() - startTime;
-      
       return {
         id: generateId(),
         type: 'tool_execution_response',
         timestamp: Date.now(),
         requestId: request.id,
-        executionId: request.executionId,
-        error: error instanceof Error ? error.message : String(error),
-        metadata: {
-          executionTime,
-          workingDirectory: process.cwd()
-        }
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -990,7 +996,9 @@ This tool proxy architecture ensures that while the agent logic runs on the serv
 
 # Milestone 2: Separate Process Architecture
 
-**Goal:** Split into separate CLI and server processes on same machine
+**Goal:** Move from loopback (Milestone 1.5) to separate CLI and server processes communicating over WebSocket
+
+Building on Milestone 1.5's working tool proxy, this milestone splits the processes while maintaining the same protocol.
 
 ## 2.1 WebSocket Protocol Implementation
 
