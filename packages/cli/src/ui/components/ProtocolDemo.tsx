@@ -9,7 +9,7 @@ import { Box, Text, useInput } from 'ink';
 import { useProtocolClient } from '../hooks/useProtocolClient.js';
 
 export function ProtocolDemo() {
-  const { isConnected, error, generateContent } = useProtocolClient();
+  const { isConnected, error, initializationLog, generateContent } = useProtocolClient();
   const [testResult, setTestResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,9 +40,23 @@ export function ProtocolDemo() {
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Text color="cyan">🔌 Protocol Demo</Text>
+      <Text color="cyan">🔌 Protocol Demo - Milestone 1.5</Text>
       <Text>Status: {isConnected ? '✅ Connected' : '❌ Disconnected'}</Text>
-      {error && <Text color="red">Error: {error}</Text>}
+      
+      <Box marginTop={1} flexDirection="column">
+        <Text color="cyan">Initialization Log:</Text>
+        {initializationLog.map((logEntry, index) => (
+          <Text key={index} color="gray">
+            {logEntry}
+          </Text>
+        ))}
+      </Box>
+      
+      {error && (
+        <Box marginTop={1}>
+          <Text color="red">Error: {error}</Text>
+        </Box>
+      )}
       
       <Box marginTop={1}>
         <Text color="yellow">

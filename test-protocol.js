@@ -6,9 +6,10 @@
 
 import { LoopbackProtocolClient } from './packages/core-protocol/dist/index.js';
 import { createCoreServer } from './packages/core-server/dist/index.js';
+import { LocalToolExecutor } from './packages/cli/dist/src/tools/localToolExecutor.js';
 
 async function testProtocol() {
-  console.log('🧪 Testing Protocol Milestone 1...\n');
+  console.log('🧪 Testing Protocol Milestone 1.5: Tool Discovery...\n');
   
   try {
     // Step 1: Create server
@@ -26,22 +27,19 @@ async function testProtocol() {
     await client.connect();
     console.log('   ✅ Connected');
     
-    // Step 4: Setup tool handler
-    console.log('4. Setting up tool handler...');
-    client.onToolRequest(async (request) => {
-      console.log(`   🔧 Tool request: ${request.tool}`);
-      return {
-        id: `tool-response-${Date.now()}`,
-        type: 'tool_execution_response',
-        timestamp: Date.now(),
-        requestId: request.id,
-        result: { message: `Tool ${request.tool} executed successfully` }
-      };
-    });
-    console.log('   ✅ Tool handler ready');
+    // Step 4: Setup tool execution
+    console.log('4. Setting up tool execution...');
+    const toolExecutor = new LocalToolExecutor(process.cwd());
+    client.setupToolExecution(toolExecutor);
+    console.log('   ✅ Tool executor ready');
     
-    // Step 5: Test content generation
-    console.log('5. Testing content generation...');
+    // Step 5: Announce tools
+    console.log('5. Announcing available tools...');
+    await client.announceTools();
+    console.log('   ✅ Tools announced');
+    
+    // Step 6: Test content generation
+    console.log('6. Testing content generation...');
     const response = await client.generateContent({
       contents: [
         { role: 'user', parts: [{ text: 'Hello from protocol test!' }] }
@@ -51,15 +49,16 @@ async function testProtocol() {
     console.log('   ✅ Content generated:');
     console.log('   Response:', JSON.stringify(response, null, 2));
     
-    // Step 6: Disconnect
-    console.log('6. Disconnecting...');
+    // Step 7: Disconnect
+    console.log('7. Disconnecting...');
     await client.disconnect();
     console.log('   ✅ Disconnected');
     
-    console.log('\n🎉 Protocol Milestone 1 Test PASSED!');
+    console.log('\n🎉 Protocol Milestone 1.5 Test PASSED!');
     console.log('   - Client/server separation: ✅');
     console.log('   - Loopback communication: ✅');
     console.log('   - Message protocol: ✅');
+    console.log('   - Tool discovery: ✅');
     console.log('   - Tool execution framework: ✅');
     
   } catch (error) {

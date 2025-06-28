@@ -43,9 +43,44 @@ export interface StreamingResponse extends ProtocolMessage {
   isComplete: boolean;
 }
 
+/**
+ * Tool parameter schema following JSON Schema specification
+ */
+export interface ToolParameterSchema {
+  type: 'object';
+  properties: Record<string, {
+    type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+    description?: string;
+    enum?: any[];
+    items?: any;
+    required?: string[];
+    [key: string]: any;
+  }>;
+  required?: string[];
+  additionalProperties?: boolean;
+}
+
+/**
+ * Definition of a tool that can be executed by the protocol
+ */
+export interface ToolDefinition {
+  /** Unique name of the tool */
+  name: string;
+  /** Human-readable description of what the tool does */
+  description: string;
+  /** JSON Schema defining the tool's parameters */
+  parameters: ToolParameterSchema;
+}
+
+export interface ToolDiscoveryMessage extends ProtocolMessage {
+  type: 'tool_discovery';
+  tools: ToolDefinition[];
+}
+
 export type ProtocolMessageType = 
   | GenerateContentRequest 
   | GenerateContentResponse
   | ToolExecutionRequest 
   | ToolExecutionResponse
-  | StreamingResponse;
+  | StreamingResponse
+  | ToolDiscoveryMessage;

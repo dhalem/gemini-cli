@@ -444,9 +444,561 @@ Streams generated content back to the client.
 [Detailed protocol specification]
 ```
 
+# Milestone 1: Implementation Complete ✅
+
+Milestone 1 has been successfully implemented and tested with:
+
+## ✅ What Works
+- **Protocol Foundation**: `core-protocol` and `core-server` packages created
+- **Loopback Communication**: Client/server separation in same process
+- **Real API Integration**: Uses original `GeminiClient` with empty tool registry
+- **Message Protocol**: Request/response pattern for content generation
+- **Working Demo**: Protocol successfully calls real Gemini API
+
+## 📁 Package Structure
+```
+packages/core-protocol/     # Protocol types, client abstractions, loopback
+packages/core-server/       # Server implementation with GeminiClient
+packages/cli/               # Updated to use protocol client (demo mode)
+```
+
+## 🧪 Testing
+- **Integration test**: `test-protocol.js` validates end-to-end flow
+- **Real API calls**: Successfully tested with actual Gemini API keys
+- **Protocol messaging**: Request/response flow working correctly
+
+## 🎯 Current Status
+- Client creates `GenerateContentRequest` 
+- Server processes with `GeminiClient.generateContent()`
+- Response returned via `GenerateContentResponse`
+- **No tools**: Uses empty tool registry to avoid dependencies
+
+**Ready for Milestone 1.5: Tool Discovery & Local Tool Proxy**
+
+---
+
+# Milestone 1.5: Tool Discovery & Local Tool Proxy
+
+**Goal**: Add tool discovery and local tool execution to the working Milestone 1 protocol
+
+## Overview
+
+Building on Milestone 1's working protocol, this milestone adds the ability for:
+- **Client to announce available tools** when connecting
+- **Server to execute tools locally** via the protocol 
+- **Foundation for tool proxy** pattern needed for separate processes
+
+This keeps the same loopback communication but adds tool functionality, bridging the gap between basic protocol (M1) and separate processes (M2).
+
+## Key Changes from Milestone 1
+- Add tool discovery protocol messages
+- Replace empty tool registry with real tools
+- Add local tool execution through protocol
+- Server can now use file operations, shell commands, etc.
+
+## Architecture
+
+```
+┌─────────────────┐                    ┌─────────────────┐
+│   Core Server   │                    │   CLI Client    │
+│                 │                    │                 │
+│ ┌─────────────┐ │                    │ ┌─────────────┐ │
+│ │   Gemini    │ │   Tool Request     │ │ Tool        │ │
+│ │   Chat      │ │ ──────────────────► │ Registry    │ │
+│ │   Session   │ │                    │ │             │ │
+│ │             │ │   Tool Response    │ │ • read_file │ │
+│ │  needs      │ │ ◄────────────────── │ • write_file│ │
+│ │  read_file  │ │                    │ │ • shell     │ │
+│ │             │ │                    │ │ • grep      │ │
+│ └─────────────┘ │                    │ │ • ...       │ │
+│                 │                    │ └─────────────┘ │
+└─────────────────┘                    └─────────────────┘
+```
+
+## Protocol Messages
+
+### Tool Discovery Message
+```typescript
+export interface ToolDiscoveryMessage extends ProtocolMessage {
+  type: 'tool_discovery';
+  tools: ToolDefinition[];
+}
+
+export interface ToolDefinition {
+  name: string;                    // Tool identifier (e.g., "read_file")
+  description: string;             // Human-readable description
+  parameters: any;                 // JSON schema for parameters
+}
+```
+
+### Tool Execution Request
+```typescript
+export interface ToolExecutionRequest extends ProtocolMessage {
+  type: 'tool_execution_request';
+  tool: string;                        // Tool name (e.g., "read_file")
+  parameters: Record<string, any>;     // Tool-specific parameters
+}
+```
+
+### Tool Execution Response
+```typescript
+export interface ToolExecutionResponse extends ProtocolMessage {
+  type: 'tool_execution_response';
+  requestId: string;          // Links back to the request
+  result?: any;               // Tool execution result on success
+  error?: string;             // Error message on failure
+}
+```
+
+## Implementation
+
+### 1. Server-Side Tool Proxy
+
+The server maintains a tool proxy that forwards tool execution requests to the client and manages responses.
+
+```typescript
+// packages/core-server/src/protocol/toolProxy.ts
+export class ToolProxy {
+  private pendingRequests = new Map<string, {
+    resolve: (result: any) => void;
+    reject: (error: Error) => void;
+    timeout: NodeJS.Timeout;
+  }>();
+  
+  private clientTools = new Map<string, ToolDefinition[]>(); // clientId -> tools
+  
+  constructor(
+    private server: ProtocolServer,
+    private timeoutMs: number = 30000
+  ) {}
+  
+  async executeTool(
+    clientId: string, 
+    toolName: string, 
+    parameters: Record<string, any>
+  ): Promise<any> {
+    const request: ToolExecutionRequest = {
+      id: generateId(),
+      type: 'tool_execution_request',
+      timestamp: Date.now(),
+      tool: toolName,
+      parameters
+    };
+    
+    return new Promise((resolve, reject) => {
+      // Set up timeout
+      const timeout = setTimeout(() => {
+        this.pendingRequests.delete(request.id);
+        reject(new Error(`Tool execution timeout: ${toolName}`));
+      }, this.timeoutMs);
+      
+      // Store request handlers
+      this.pendingRequests.set(request.id, {
+        resolve,
+        reject,
+        timeout
+      });
+      
+      // Send request to client
+      this.server.sendMessage(clientId, request);
+    });
+  }
+  
+  handleToolResponse(response: ToolExecutionResponse): void {
+    const pending = this.pendingRequests.get(response.requestId);
+    if (!pending) {
+      console.warn(`Received tool response for unknown request: ${response.requestId}`);
+      return;
+    }
+    
+    // Clean up
+    clearTimeout(pending.timeout);
+    this.pendingRequests.delete(response.requestId);
+    
+    // Resolve or reject based on response
+    if (response.error) {
+      pending.reject(new Error(response.error));
+    } else {
+      pending.resolve(response.result);
+    }
+  }
+  
+  handleToolDiscovery(clientId: string, discovery: ToolDiscoveryMessage): void {
+    console.log(`Client ${clientId} announced ${discovery.tools.length} tools`);
+    this.clientTools.set(clientId, discovery.tools);
+    
+    // Log available tools for debugging
+    discovery.tools.forEach(tool => {
+      console.log(`  - ${tool.name}: ${tool.description}`);
+    });
+  }
+  
+  getClientTools(clientId: string): ToolDefinition[] {
+    return this.clientTools.get(clientId) || [];
+  }
+  
+  hasClientTool(clientId: string, toolName: string): boolean {
+    const tools = this.getClientTools(clientId);
+    return tools.some(tool => tool.name === toolName);
+  }
+  
+  getClientToolDefinition(clientId: string, toolName: string): ToolDefinition | undefined {
+    const tools = this.getClientTools(clientId);
+    return tools.find(tool => tool.name === toolName);
+  }
+  
+  // Generate function declarations for Gemini from client tools
+  getFunctionDeclarations(clientId: string): FunctionDeclaration[] {
+    const tools = this.getClientTools(clientId);
+    return tools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters
+    }));
+  }
+}
+```
+
+### 2. Client-Side Tool Executor
+
+The client maintains a tool registry, announces available tools on connect, and executes tools locally when requested by the server.
+
+```typescript
+// packages/cli/src/tools/localToolExecutor.ts
+export class LocalToolExecutor {
+  private toolRegistry: ToolRegistry;
+  
+  constructor(targetDir: string) {
+    this.toolRegistry = new ToolRegistry();
+    this.registerCoreTools(targetDir);
+  }
+  
+  private registerCoreTools(targetDir: string): void {
+    // Register all existing tools
+    this.toolRegistry.registerTool(new ReadFileTool(targetDir));
+    this.toolRegistry.registerTool(new WriteFileTool(targetDir));
+    this.toolRegistry.registerTool(new ShellTool(targetDir));
+    this.toolRegistry.registerTool(new GrepTool(targetDir));
+    this.toolRegistry.registerTool(new GlobTool(targetDir));
+    this.toolRegistry.registerTool(new EditTool());
+    this.toolRegistry.registerTool(new LSFilesTool(targetDir));
+    // ... register all other core tools
+  }
+  
+  getToolDefinitions(): ToolDefinition[] {
+    const tools = this.toolRegistry.getAllTools();
+    return tools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.schema.parameters
+    }));
+  }
+  
+  async execute(request: ToolExecutionRequest): Promise<ToolExecutionResponse> {
+    try {
+      const tool = this.toolRegistry.getTool(request.tool);
+      if (!tool) {
+        throw new Error(`Unknown tool: ${request.tool}`);
+      }
+      
+      const result = await tool.execute(request.parameters);
+      
+      return {
+        id: generateId(),
+        type: 'tool_execution_response',
+        timestamp: Date.now(),
+        requestId: request.id,
+        result
+      };
+    } catch (error) {
+      return {
+        id: generateId(),
+        type: 'tool_execution_response',
+        timestamp: Date.now(),
+        requestId: request.id,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+}
+```
+
+### 3. Server Message Handling
+
+The server needs to handle tool discovery messages and route them to the tool proxy.
+
+```typescript
+// packages/core-server/src/server.ts (updated)
+export class CoreServer extends ProtocolServer {
+  private toolProxy: ToolProxy;
+  
+  constructor() {
+    super();
+    this.toolProxy = new ToolProxy(this);
+  }
+  
+  async handleMessage(message: ProtocolMessage, clientId = 'loopback'): Promise<void> {
+    switch (message.type) {
+      case 'tool_discovery':
+        this.toolProxy.handleToolDiscovery(clientId, message as ToolDiscoveryMessage);
+        break;
+        
+      case 'tool_execution_response':
+        this.toolProxy.handleToolResponse(message as ToolExecutionResponse);
+        break;
+        
+      case 'generate_content_request':
+        await this.handleGenerateContent(message as GenerateContentRequest, clientId);
+        break;
+        
+      default:
+        console.warn(`Unknown message type: ${message.type}`);
+    }
+  }
+  
+  private async handleGenerateContent(request: GenerateContentRequest, clientId: string): Promise<void> {
+    // Get client's available tools for Gemini
+    const toolDeclarations = this.toolProxy.getFunctionDeclarations(clientId);
+    
+    // Create GeminiChat with client tools
+    const chat = new GeminiChat(
+      this.config,
+      this.contentGenerator,
+      this.model,
+      {
+        tools: toolDeclarations.length > 0 ? [{ functionDeclarations: toolDeclarations }] : undefined
+      },
+      [],
+      this.toolProxy,  // Pass tool proxy for function execution
+      clientId         // Pass client ID for tool requests
+    );
+    
+    const response = await chat.sendMessage({
+      message: request.contents[0]?.parts?.[0]?.text || '',
+      config: request.config
+    });
+    
+    // Send response back to client
+    const responseMessage: GenerateContentResponse = {
+      id: generateId(),
+      type: 'generate_content_response',
+      timestamp: Date.now(),
+      requestId: request.id,
+      response
+    };
+    
+    await this.sendMessage(clientId, responseMessage);
+  }
+}
+```
+
+### 4. Integration with Gemini Chat
+
+The server's Gemini chat session uses the tool proxy instead of direct tool execution.
+
+```typescript
+// packages/core-server/src/core/geminiChat.ts (modified)
+export class GeminiChat {
+  constructor(
+    private config: Config,
+    private contentGenerator: ContentGenerator,
+    private model: string,
+    private generationConfig: GenerateContentConfig = {},
+    private history: Content[] = [],
+    private toolProxy?: ToolProxy,  // NEW: Tool proxy for remote execution
+    private clientId?: string       // NEW: Client ID for tool requests
+  ) {
+    validateHistory(history);
+  }
+  
+  private async executeFunction(
+    functionCall: FunctionCall
+  ): Promise<FunctionResponse> {
+    if (!this.toolProxy || !this.clientId) {
+      throw new Error('Tool execution not available: no tool proxy configured');
+    }
+    
+    try {
+      // Execute tool remotely via proxy
+      const result = await this.toolProxy.executeFunction(
+        this.clientId,
+        functionCall.name,
+        functionCall.args
+      );
+      
+      return {
+        name: functionCall.name,
+        response: result
+      };
+    } catch (error) {
+      return {
+        name: functionCall.name,
+        response: {
+          error: error instanceof Error ? error.message : String(error)
+        }
+      };
+    }
+  }
+}
+```
+
+### 4. Protocol Client Integration
+
+The protocol client sets up tool request handling and connects it to the local tool executor.
+
+```typescript
+// packages/core-protocol/src/client.ts (updated)
+export abstract class ProtocolClient {
+  private toolExecutor?: LocalToolExecutor;
+  
+  setupToolExecution(targetDir: string): void {
+    this.toolExecutor = new LocalToolExecutor(targetDir);
+    
+    // Handle incoming tool requests
+    this.onMessage((message) => {
+      if (message.type === 'tool_execution_request') {
+        this.handleToolRequest(message as ToolExecutionRequest);
+      }
+    });
+  }
+  
+  async announceTools(): Promise<void> {
+    if (!this.toolExecutor) {
+      throw new Error('Tool executor not set up - call setupToolExecution first');
+    }
+    
+    const toolDefinitions = this.toolExecutor.getToolDefinitions();
+    const discovery: ToolDiscoveryMessage = {
+      id: generateId(),
+      type: 'tool_discovery',
+      timestamp: Date.now(),
+      tools: toolDefinitions
+    };
+    
+    await this.sendMessage(discovery);
+    console.log(`Announced ${toolDefinitions.length} tools to server`);
+  }
+  
+  private async handleToolRequest(request: ToolExecutionRequest): Promise<void> {
+    if (!this.toolExecutor) {
+      console.error('Received tool request but no tool executor configured');
+      return;
+    }
+    
+    try {
+      const response = await this.toolExecutor.execute(request);
+      await this.sendMessage(response);
+    } catch (error) {
+      console.error('Error executing tool:', error);
+      // Send error response
+      const errorResponse: ToolExecutionResponse = {
+        id: generateId(),
+        type: 'tool_execution_response',
+        timestamp: Date.now(),
+        requestId: request.id,
+        executionId: request.executionId,
+        error: error instanceof Error ? error.message : String(error)
+      };
+      await this.sendMessage(errorResponse);
+    }
+  }
+}
+```
+
+## Security Considerations
+
+### 1. Client-Side Security
+Security is primarily handled on the client side since tools execute locally:
+
+- **Tool Registration Control**: Client chooses which tools to register and announce
+- **Existing Tool Validation**: Many tools already have path validation (e.g., ReadFileTool, WriteFileTool)
+- **Process Isolation**: Tools run in client process with user's permissions
+- **Local File System Access**: Tools only access files the user can access
+
+### 2. Basic Tool Validation
+```typescript
+// Simple validation before tool execution
+private async validateToolRequest(request: ToolExecutionRequest): Promise<void> {
+  // Check if tool exists
+  const tool = this.toolRegistry.getTool(request.tool);
+  if (!tool) {
+    throw new Error(`Unknown tool: ${request.tool}`);
+  }
+  
+  // Log tool execution for audit (optional)
+  console.log(`Executing tool: ${request.tool}`, request.parameters);
+}
+```
+
+## Benefits
+
+1. **Security**: Tools run on client machine with local file system access
+2. **Flexibility**: Server can request any tool execution without needing to implement them
+3. **Scalability**: Server doesn't need to manage file systems or shell access
+4. **Auditability**: All tool executions are logged and can be monitored
+5. **Extensibility**: New tools can be added to client without server changes
+
+## Tool Discovery Flow
+
+```
+1. Client connects to server:
+   const client = new LoopbackProtocolClient(server);
+   await client.connect();
+
+2. Client sets up tool execution:
+   client.setupToolExecution(process.cwd());
+
+3. Client announces available tools:
+   await client.announceTools();
+   // Server receives ToolDiscoveryMessage with all client tools
+
+4. Server stores client tools and can now use them in Gemini chat:
+   const toolDeclarations = toolProxy.getFunctionDeclarations(clientId);
+   const chat = new GeminiChat(config, contentGenerator, model, {
+     tools: [{ functionDeclarations: toolDeclarations }]
+   });
+```
+
+## Tool Proxy Flow Example
+
+```
+1. User: "Read the package.json file"
+
+2. Server receives message, Gemini responds with function call:
+   {
+     "name": "read_file",
+     "arguments": { "path": "package.json" }
+   }
+
+3. Server creates ToolExecutionRequest:
+   {
+     "type": "tool_execution_request",
+     "tool": "read_file",
+     "parameters": { "path": "package.json" },
+     "executionId": "exec_123"
+   }
+
+4. Client receives request, validates security, executes ReadFileTool
+
+5. Client sends ToolExecutionResponse:
+   {
+     "type": "tool_execution_response",
+     "executionId": "exec_123",
+     "result": { "content": "{ \"name\": \"gemini-cli\", ... }" }
+   }
+
+6. Server receives response, continues Gemini conversation with file content
+
+7. Server sends final response to user with file contents
+```
+
+This tool proxy architecture ensures that while the agent logic runs on the server, all file system and local tool access remains secure on the client machine.
+
 # Milestone 2: Separate Process Architecture
 
-**Goal:** Split into separate CLI and server processes on same machine
+**Goal:** Move from loopback (Milestone 1.5) to separate CLI and server processes communicating over WebSocket
+
+Building on Milestone 1.5's working tool proxy, this milestone splits the processes while maintaining the same protocol.
 
 ## 2.1 WebSocket Protocol Implementation
 
