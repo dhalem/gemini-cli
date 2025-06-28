@@ -19,6 +19,8 @@
   "references": [
     { "path": "packages/core" },
     { "path": "packages/cli" },
-    { "path": "packages/mcp" }
+    { "path": "packages/mcp" },
+    { "path": "packages/core-protocol" },
+    { "path": "packages/core-server" }
   ]
 }

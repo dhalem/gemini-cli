@@ -1,0 +1,33 @@
+{
+  "name": "@google/gemini-cli-core-protocol",
+  "version": "0.1.1",
+  "description": "Gemini CLI Protocol Layer",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node ../../scripts/build_package.js",
+    "clean": "rm -rf dist",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:ci": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "prerelease:version": "node ../../scripts/bind_package_version.js",
+    "prerelease:deps": "node ../../scripts/bind_package_dependencies.js",
+    "prepack": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.3",
+    "vitest": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

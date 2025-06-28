@@ -70,6 +70,7 @@ import { checkForUpdates } from './utils/updateCheck.js';
 import ansiEscapes from 'ansi-escapes';
 import { OverflowProvider } from './contexts/OverflowContext.js';
 import { ShowMoreLines } from './components/ShowMoreLines.js';
+import { ProtocolDemo } from './components/ProtocolDemo.js';
 
 const CTRL_EXIT_PROMPT_DURATION_MS = 1000;
 
@@ -89,6 +90,11 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const { stdout } = useStdout();
   const [startupPrompt, setStartupPrompt] = useState(config.getStartupPrompt());
+  
+  // Protocol demo mode for milestone 1
+  if (process.env.GEMINI_PROTOCOL_DEMO === 'true') {
+    return <ProtocolDemo />;
+  }
 
   useEffect(() => {
     checkForUpdates().then(setUpdateMessage);

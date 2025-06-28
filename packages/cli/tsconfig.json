@@ -14,5 +14,10 @@
     "./package.json"
   ],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts"],
-  "references": [{ "path": "../core" }, { "path": "../mcp" }]
+  "references": [
+    { "path": "../core" }, 
+    { "path": "../mcp" },
+    { "path": "../core-protocol" },
+    { "path": "../core-server" }
+  ]
 }
